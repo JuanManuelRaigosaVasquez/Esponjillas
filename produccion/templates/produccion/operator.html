@@ -16,6 +16,7 @@
     }
     .touch-btn.gold { background: linear-gradient(135deg, #f9c80e, #e6b800); color: #6b5400; }
     .touch-btn.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #333; }
+    .touch-btn.green { background: linear-gradient(135deg, #4ade80, #22c55e); color: #14532d; }
     .pulse {
         animation: pulse 0.3s ease;
     }
@@ -30,6 +31,14 @@
     @keyframes slideIn {
         from { opacity: 0; transform: translateX(-20px); }
         to { opacity: 1; transform: translateX(0); }
+    }
+    .sponge-icon {
+        width: 48px;
+        height: 48px;
+    }
+    .sponge-icon-sm {
+        width: 24px;
+        height: 24px;
     }
 </style>
 {% endblock %}
@@ -71,12 +80,16 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="referencias-grid">
         {% for ref in referencias %}
         <button class="touch-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-md border border-white/20 card
-            {% if ref.tipo == 'oro' %}gold{% else %}silver{% endif %}"
+            {% if ref.codigo == 'ESP-SV-005' %}green{% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}gold{% else %}silver{% endif %}"
             onclick="registrarProduccion({{ ref.id }}, {{ estacion_actual.id|default:0 }})"
             id="btn-{{ ref.id }}">
-            <span class="material-symbols-outlined text-4xl" style="font-size: 48px;">
-                {% if ref.tipo == 'oro' %}diamond{% else %}circle{% endif %}
-            </span>
+            {% if ref.codigo == 'ESP-SV-005' %}
+                <img src="/static/img/esponjas/verde.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+            {% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}
+                <img src="/static/img/esponjas/oro.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+            {% else %}
+                <img src="/static/img/esponjas/brillo.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+            {% endif %}
             <span class="font-bold text-sm uppercase tracking-wide">{{ ref.nombre }}</span>
             <span class="text-xs opacity-70">{{ ref.codigo }}</span>
         </button>
@@ -95,10 +108,14 @@
         </h3>
         <div class="space-y-2 max-h-80 overflow-y-auto" id="ultimos-registros">
             {% for reg in ultimos %}
-            <div class="flex items-center gap-3 p-3 rounded-xl {% if reg.referencia.tipo == 'oro' %}bg-[#f9c80e]/10{% else %}bg-gray-100{% endif %}">
-                <span class="material-symbols-outlined {% if reg.referencia.tipo == 'oro' %}text-[#745b00]{% else %}text-gray-500{% endif %}">
-                    {% if reg.referencia.tipo == 'oro' %}diamond{% else %}circle{% endif %}
-                </span>
+            <div class="flex items-center gap-3 p-3 rounded-xl {% if reg.referencia.codigo == 'ESP-SV-005' %}bg-green-100{% elif reg.referencia.codigo == 'ESP-ORO-003' or reg.referencia.codigo == 'ESP-DU-004' %}bg-[#f9c80e]/10{% else %}bg-gray-100{% endif %}">
+                {% if reg.referencia.codigo == 'ESP-SV-005' %}
+                    <img src="/static/img/esponjas/verde.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% elif reg.referencia.codigo == 'ESP-ORO-003' or reg.referencia.codigo == 'ESP-DU-004' %}
+                    <img src="/static/img/esponjas/oro.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% else %}
+                    <img src="/static/img/esponjas/brillo.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% endif %}
                 <span class="font-semibold">{{ reg.referencia.codigo }}</span>
                 <span class="text-sm text-[#4e4632]">x{{ reg.cantidad }}</span>
                 <span class="text-xs text-[#807660] ml-auto">{{ reg.hora|time:"H:i" }}</span>
@@ -151,14 +168,23 @@ async function registrarProduccion(refId, estacionId) {
 
 function actualizarUltimos(data) {
     const container = document.getElementById('ultimos-registros');
-    const colorClass = data.tipo === 'Oro' ? 'bg-[#f9c80e]/10' : 'bg-gray-100';
-    const iconColor = data.tipo === 'Oro' ? 'text-[#745b00]' : 'text-gray-500';
-    const icon = data.tipo === 'Oro' ? 'diamond' : 'circle';
+    let colorClass, iconSrc;
+    
+    if (data.codigo === 'ESP-SV-005') {
+        colorClass = 'bg-green-100';
+        iconSrc = '/static/img/esponjas/verde.svg';
+    } else if (data.codigo === 'ESP-ORO-003' || data.codigo === 'ESP-DU-004') {
+        colorClass = 'bg-[#f9c80e]/10';
+        iconSrc = '/static/img/esponjas/oro.svg';
+    } else {
+        colorClass = 'bg-gray-100';
+        iconSrc = '/static/img/esponjas/brillo.svg';
+    }
 
     const div = document.createElement('div');
     div.className = 'flex items-center gap-3 p-3 rounded-xl slide-in ' + colorClass;
     div.innerHTML = `
-        <span class="material-symbols-outlined ${iconColor}">${icon}</span>
+        <img src="${iconSrc}" alt="${data.referencia}" class="sponge-icon-sm">
         <span class="font-semibold">${data.referencia}</span>
         <span class="text-sm text-[#4e4632]">x${data.cantidad}</span>
         <span class="text-xs text-[#807660] ml-auto">${data.hora}</span>

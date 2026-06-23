@@ -49,7 +49,7 @@ maria, created = User.objects.get_or_create(username='maria')
 if created:
     maria.set_password('operario123')
     maria.first_name = 'Maria'
-    maria.last_name = 'Flopa'
+    maria.last_name = 'Horneado'
     maria.save()
     print("  maria creada")
 else:
@@ -88,12 +88,14 @@ TarifaOperario.objects.get_or_create(
 )
 
 print("Creando estaciones...")
+Estacion.objects.all().delete()
 estaciones = []
 for nombre, tipo_mov, orden in [
-    ('Sellado', 'suma', 1),
-    ('Flopa', 'suma', 2),
-    ('Troquel', 'resta', 3),
-    ('Empaque', 'ninguno', 4),
+    ('Troquelado de espuma', 'suma', 1),
+    ('Horneado', 'suma', 2),
+    ('Corte', 'suma', 3),
+    ('Pegado', 'suma', 4),
+    ('Empaque', 'suma', 5),
 ]:
     est, _ = Estacion.objects.get_or_create(
         nombre=nombre,
@@ -104,145 +106,117 @@ for nombre, tipo_mov, orden in [
 print("Creando referencias...")
 refs_data = [
     {
-        'codigo': 'AN-ORO-001', 'nombre': 'Anillo Oro', 'tipo': 'oro',
+        'codigo': 'ESP-BRI-001', 'nombre': 'Esponja de brillo', 'tipo': 'oro',
         'merma_pct': 2.5, 'consumo_espuma_kg': 0.015, 'consumo_tela_m': 0.05,
-        'costo_mp_estandar': 12000
+        'costo_mp_estandar': 1200
     },
     {
-        'codigo': 'CD-ORO-002', 'nombre': 'Cadena Oro', 'tipo': 'oro',
+        'codigo': 'ESP-OP-002', 'nombre': 'Esponja oro plata', 'tipo': 'oro',
         'merma_pct': 3.0, 'consumo_espuma_kg': 0.020, 'consumo_tela_m': 0.08,
-        'costo_mp_estandar': 25000
+        'costo_mp_estandar': 1500
     },
     {
-        'codigo': 'AN-PL-001', 'nombre': 'Anillo Plata', 'tipo': 'plata',
-        'merma_pct': 2.0, 'consumo_espuma_kg': 0.012, 'consumo_tela_m': 0.04,
-        'costo_mp_estandar': 5000
+        'codigo': 'ESP-ORO-003', 'nombre': 'Esponja oro', 'tipo': 'oro',
+        'merma_pct': 2.0, 'consumo_espuma_kg': 0.018, 'consumo_tela_m': 0.06,
+        'costo_mp_estandar': 1300
     },
     {
-        'codigo': 'CD-PL-002', 'nombre': 'Cadena Plata', 'tipo': 'plata',
-        'merma_pct': 2.5, 'consumo_espuma_kg': 0.018, 'consumo_tela_m': 0.07,
-        'costo_mp_estandar': 8000
+        'codigo': 'ESP-DU-004', 'nombre': 'Esponja doble uso', 'tipo': 'plata',
+        'merma_pct': 2.5, 'consumo_espuma_kg': 0.022, 'consumo_tela_m': 0.07,
+        'costo_mp_estandar': 1800
+    },
+    {
+        'codigo': 'ESP-SV-005', 'nombre': 'Esponja sabra verde', 'tipo': 'plata',
+        'merma_pct': 2.0, 'consumo_espuma_kg': 0.016, 'consumo_tela_m': 0.05,
+        'costo_mp_estandar': 1100
     },
 ]
 
+Referencia.objects.all().delete()
+ConsumoEstandar.objects.all().delete()
 referencias = []
 for data in refs_data:
-    ref, _ = Referencia.objects.get_or_create(
-        codigo=data['codigo'],
-        defaults={k: v for k, v in data.items() if k != 'codigo'}
-    )
+    ref = Referencia.objects.create(**data)
     referencias.append(ref)
 
 for ref in referencias:
-    ConsumoEstandar.objects.get_or_create(
+    ConsumoEstandar.objects.create(
         referencia=ref,
-        defaults={
-            'espuma_kg_por_unidad': ref.consumo_espuma_kg,
-            'tela_m_por_unidad': ref.consumo_tela_m,
-        }
+        espuma_kg_por_unidad=ref.consumo_espuma_kg,
+        tela_m_por_unidad=ref.consumo_tela_m,
     )
 
-sellado = estaciones[0]
-flopa = estaciones[1]
-empaque = estaciones[3]
+troquelado = estaciones[0]
+horneado = estaciones[1]
+corte = estaciones[2]
+pegado = estaciones[3]
+empaque = estaciones[4]
 
-# Solo crear datos de produccion si no hay registros previos
-if ProduccionRegistro.objects.count() == 0:
-    print("Creando produccion de ejemplo...")
+ProduccionRegistro.objects.all().delete()
+MovimientoInventario.objects.all().delete()
+print("Creando produccion diaria (~120 costales por estacion)...")
 
-    hora = timezone.now().replace(hour=8, minute=0, second=0)
+operarios = [juan, maria, carlos]
+costales_por_estacion = 120
+piezas_por_costal = 120
 
-    for i in range(20):
+hora = timezone.now().replace(hour=6, minute=0, second=0, microsecond=0)
+
+for estacion in estaciones:
+    intervalo_min = 480 / costales_por_estacion
+    for i in range(costales_por_estacion):
+        operario = operarios[i % len(operarios)]
+        referencia = referencias[i % len(referencias)]
+        timestamp = hora + timedelta(minutes=intervalo_min * i)
+
         reg = ProduccionRegistro.objects.create(
-            operario=juan,
-            referencia=referencias[0],
-            estacion=sellado,
-            cantidad=1,
-            timestamp=hora
+            operario=operario,
+            referencia=referencia,
+            estacion=estacion,
+            cantidad=piezas_por_costal,
+            timestamp=timestamp,
         )
         MovimientoInventario.objects.create(
-            tipo='entrada', referencia=referencias[0], estacion=sellado,
-            cantidad=1, produccion=reg, origen=f'Sellado Anillo Oro #{reg.id}'
+            tipo='entrada',
+            referencia=referencia,
+            estacion=estacion,
+            cantidad=piezas_por_costal,
+            produccion=reg,
+            origen=f'{estacion.nombre} - {referencia.nombre} costal #{i+1}',
         )
-        hora = hora + timedelta(minutes=3)
+    print(f"  {estacion.nombre}: {costales_por_estacion} costales creados")
 
-    for i in range(15):
-        reg = ProduccionRegistro.objects.create(
-            operario=juan,
-            referencia=referencias[2],
-            estacion=sellado,
-            cantidad=1,
-            timestamp=hora
-        )
-        MovimientoInventario.objects.create(
-            tipo='entrada', referencia=referencias[2], estacion=sellado,
-            cantidad=1, produccion=reg, origen=f'Sellado Anillo Plata #{reg.id}'
-        )
-        hora = hora + timedelta(minutes=3)
+MateriaPrima.objects.all().delete()
+print("Creando materia prima de ejemplo...")
+MateriaPrima.objects.create(tipo='espuma', cantidad_kg=5000.0, cantidad_unidades=0, registrado_por=juan, descripcion='Compra inicial espuma')
+MateriaPrima.objects.create(tipo='rollo', cantidad_kg=0, cantidad_unidades=2000, registrado_por=juan, descripcion='Compra rollos proveedor A')
+MateriaPrima.objects.create(tipo='tela', cantidad_kg=3000.0, cantidad_unidades=0, registrado_por=maria, descripcion='Tela microfibra lote 8821')
 
-    for i in range(10):
-        reg = ProduccionRegistro.objects.create(
-            operario=maria,
-            referencia=referencias[1],
-            estacion=flopa,
-            cantidad=1,
-            timestamp=hora
-        )
-        MovimientoInventario.objects.create(
-            tipo='entrada', referencia=referencias[1], estacion=flopa,
-            cantidad=1, produccion=reg, origen=f'Flopa Cadena Oro #{reg.id}'
-        )
-        hora = hora + timedelta(minutes=4)
+OrdenTercerizacion.objects.all().delete()
+print("Creando orden de tercerizacion de ejemplo...")
+orden = OrdenTercerizacion(
+    referencia=referencias[0],
+    cantidad_salida=1000,
+    cantidad_esperada=1000,
+    observaciones='Tercerizacion esponjas de brillo para acabado especial'
+)
+orden.save()
 
-    for i in range(8):
-        ProduccionRegistro.objects.create(
-            operario=carlos,
-            referencia=referencias[2],
-            estacion=empaque,
-            cantidad=1,
-            timestamp=hora
-        )
-        hora = hora + timedelta(minutes=5)
-else:
-    print(f"  Ya existen {ProduccionRegistro.objects.count()} registros de produccion, saltando...")
-
-# Solo crear materia prima si no hay registros previos
-if MateriaPrima.objects.count() == 0:
-    print("Creando materia prima de ejemplo...")
-    MateriaPrima.objects.create(tipo='espuma', cantidad_kg=50.0, cantidad_unidades=0, registrado_por=juan, descripcion='Compra inicial espuma')
-    MateriaPrima.objects.create(tipo='rollo', cantidad_kg=0, cantidad_unidades=200, registrado_por=juan, descripcion='Compra rollos proveedor A')
-    MateriaPrima.objects.create(tipo='tela', cantidad_kg=30.0, cantidad_unidades=0, registrado_por=maria, descripcion='Tela microfibra lote 8821')
-else:
-    print(f"  Ya existen {MateriaPrima.objects.count()} registros de materia prima, saltando...")
-
-# Solo crear ordenes si no hay registros previos
-if OrdenTercerizacion.objects.count() == 0:
-    print("Creando orden de tercerizacion de ejemplo...")
-    orden = OrdenTercerizacion(
-        referencia=referencias[0],
-        cantidad_salida=100,
-        cantidad_esperada=100,
-        observaciones='Tercerizacion anillos oro para acabado especial'
-    )
-    orden.save()
-
-    orden2 = OrdenTercerizacion(
-        referencia=referencias[1],
-        cantidad_salida=50,
-        cantidad_esperada=50,
-        observaciones='Cadenas oro para baño adicional'
-    )
-    orden2.save()
-    orden2.cerrar(48)
-else:
-    print(f"  Ya existen {OrdenTercerizacion.objects.count()} ordenes de tercerizacion, saltando...")
+orden2 = OrdenTercerizacion(
+    referencia=referencias[1],
+    cantidad_salida=500,
+    cantidad_esperada=500,
+    observaciones='Esponjas oro plata para proceso adicional'
+)
+orden2.save()
+orden2.cerrar(480)
 
 print("\nDatos de ejemplo creados exitosamente!")
 print("=" * 50)
 print("Usuarios:")
 print("  admin / admin123 (superusuario)")
-print("  juan / operario123 (sellado)")
-print("  maria / operario123 (flopa)")
+print("  juan / operario123 (troquelado)")
+print("  maria / operario123 (horneado)")
 print("  carlos / operario123 (empaque)")
 print("  laura / supervisor123 (supervisora)")
 print(f"\nReferencias: {Referencia.objects.count()}")

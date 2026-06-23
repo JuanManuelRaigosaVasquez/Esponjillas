@@ -86,12 +86,18 @@
         <div class="space-y-3">
             {% for r in por_referencia %}
             <div class="flex items-center gap-3">
-                <span class="text-xs w-20 {% if r.referencia__tipo == 'oro' %}text-[#745b00] font-bold{% else %}text-gray-500{% endif %}">
-                    <span class="material-symbols-outlined text-sm align-middle">{% if r.referencia__tipo == 'oro' %}diamond{% else %}circle{% endif %}</span>
+                <span class="text-xs w-20 flex items-center gap-1 {% if r.referencia__codigo == 'ESP-SV-005' %}text-green-700 font-bold{% elif r.referencia__codigo == 'ESP-ORO-003' or r.referencia__codigo == 'ESP-DU-004' %}text-[#745b00] font-bold{% else %}text-gray-500{% endif %}">
+                    {% if r.referencia__codigo == 'ESP-SV-005' %}
+                        <img src="/static/img/esponjas/verde.svg" alt="{{ r.referencia__codigo }}" class="w-4 h-4">
+                    {% elif r.referencia__codigo == 'ESP-ORO-003' or r.referencia__codigo == 'ESP-DU-004' %}
+                        <img src="/static/img/esponjas/oro.svg" alt="{{ r.referencia__codigo }}" class="w-4 h-4">
+                    {% else %}
+                        <img src="/static/img/esponjas/brillo.svg" alt="{{ r.referencia__codigo }}" class="w-4 h-4">
+                    {% endif %}
                     {{ r.referencia__codigo }}
                 </span>
                 <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div class="h-full {% if r.referencia__tipo == 'oro' %}bg-[#f9c80e]{% else %}bg-gray-400{% endif %} rounded-full"
+                    <div class="h-full {% if r.referencia__codigo == 'ESP-SV-005' %}bg-green-500{% elif r.referencia__codigo == 'ESP-ORO-003' or r.referencia__codigo == 'ESP-DU-004' %}bg-[#f9c80e]{% else %}bg-gray-400{% endif %} rounded-full"
                          style="width: {% widthratio r.total total_hoy 100 %}%"></div>
                 </div>
                 <span class="text-sm font-bold w-12 text-right">{{ r.total }}</span>
@@ -118,9 +124,18 @@
             <tbody class="divide-y divide-gray-100">
                 {% for s in stock_data %}
                 <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm font-semibold">{{ s.ref.codigo }}</td>
+                    <td class="px-4 py-3 text-sm font-semibold flex items-center gap-2">
+                        {% if s.ref.codigo == 'ESP-SV-005' %}
+                            <img src="/static/img/esponjas/verde.svg" alt="{{ s.ref.codigo }}" class="w-5 h-5">
+                        {% elif s.ref.codigo == 'ESP-ORO-003' or s.ref.codigo == 'ESP-DU-004' %}
+                            <img src="/static/img/esponjas/oro.svg" alt="{{ s.ref.codigo }}" class="w-5 h-5">
+                        {% else %}
+                            <img src="/static/img/esponjas/brillo.svg" alt="{{ s.ref.codigo }}" class="w-5 h-5">
+                        {% endif %}
+                        {{ s.ref.codigo }}
+                    </td>
                     <td class="px-4 py-3 text-xs">
-                        <span class="px-2 py-1 rounded-full {% if s.ref.tipo == 'oro' %}bg-[#f9c80e]/20 text-[#745b00]{% else %}bg-gray-100 text-gray-600{% endif %} font-bold">
+                        <span class="px-2 py-1 rounded-full {% if s.ref.codigo == 'ESP-SV-005' %}bg-green-100 text-green-700{% elif s.ref.codigo == 'ESP-ORO-003' or s.ref.codigo == 'ESP-DU-004' %}bg-[#f9c80e]/20 text-[#745b00]{% else %}bg-gray-100 text-gray-600{% endif %} font-bold">
                             {{ s.ref.get_tipo_display }}
                         </span>
                     </td>

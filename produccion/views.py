@@ -89,6 +89,7 @@ def api_registrar(request):
             'ok': True,
             'id': registro.id,
             'referencia': referencia.codigo,
+            'codigo': referencia.codigo,
             'tipo': referencia.get_tipo_display(),
             'estacion': estacion.nombre,
             'cantidad': cantidad,
