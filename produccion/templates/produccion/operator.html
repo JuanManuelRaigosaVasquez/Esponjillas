@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% block title %}Produccion - Lumina{% endblock %}
+{% block extra_head %}
+<style>
+    .touch-btn {
+        min-height: 120px;
+        font-size: 1.8rem;
+        transition: all 0.1s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .touch-btn:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    .touch-btn.gold { background: linear-gradient(135deg, #f9c80e, #e6b800); color: #6b5400; }
+    .touch-btn.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #333; }
+    .pulse {
+        animation: pulse 0.3s ease;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .slide-in {
+        animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Produccion en Tiempo Real</h2>
+            <p class="text-sm text-[#4e4632]">{{ hoy|date:"l d F Y" }} - Operario: {{ user.get_full_name|default:user.username }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-[#4e4632] uppercase">Estacion:</label>
+            <select id="estacion-select" class="rounded-xl border border-[#d1c5ab] px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-[#f9c80e] outline-none" onchange="cambiarEstacion(this.value)">
+                {% for est in estaciones %}
+                <option value="{{ est.id }}" {% if est.id == estacion_actual.id %}selected{% endif %}>
+                    {{ est.nombre }} ({{ est.get_tipo_movimiento_display }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    {% if estacion_actual %}
+    <div class="mb-6">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
+            {% if estacion_actual.tipo_movimiento == 'suma' %}bg-green-100 text-green-700
+            {% elif estacion_actual.tipo_movimiento == 'resta' %}bg-red-100 text-red-700
+            {% else %}bg-blue-100 text-blue-700{% endif %}">
+            <span class="material-symbols-outlined text-lg">
+                {% if estacion_actual.tipo_movimiento == 'suma' %}add_circle
+                {% elif estacion_actual.tipo_movimiento == 'resta' %}remove_circle
+                {% else %}info{% endif %}
+            </span>
+            {{ estacion_actual.get_tipo_movimiento_display }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="referencias-grid">
+        {% for ref in referencias %}
+        <button class="touch-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-md border border-white/20 card
+            {% if ref.tipo == 'oro' %}gold{% else %}silver{% endif %}"
+            onclick="registrarProduccion({{ ref.id }}, {{ estacion_actual.id|default:0 }})"
+            id="btn-{{ ref.id }}">
+            <span class="material-symbols-outlined text-4xl" style="font-size: 48px;">
+                {% if ref.tipo == 'oro' %}diamond{% else %}circle{% endif %}
+            </span>
+            <span class="font-bold text-sm uppercase tracking-wide">{{ ref.nombre }}</span>
+            <span class="text-xs opacity-70">{{ ref.codigo }}</span>
+        </button>
+        {% empty %}
+        <div class="col-span-full text-center py-12 text-[#4e4632]">
+            <span class="material-symbols-outlined text-6xl mb-4 block">inventory_2</span>
+            <p class="text-lg">No hay referencias activas. Agregalas desde el panel de administracion.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card p-6 mt-6">
+        <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined">history</span>
+            Ultimos Registros Hoy
+        </h3>
+        <div class="space-y-2 max-h-80 overflow-y-auto" id="ultimos-registros">
+            {% for reg in ultimos %}
+            <div class="flex items-center gap-3 p-3 rounded-xl {% if reg.referencia.tipo == 'oro' %}bg-[#f9c80e]/10{% else %}bg-gray-100{% endif %}">
+                <span class="material-symbols-outlined {% if reg.referencia.tipo == 'oro' %}text-[#745b00]{% else %}text-gray-500{% endif %}">
+                    {% if reg.referencia.tipo == 'oro' %}diamond{% else %}circle{% endif %}
+                </span>
+                <span class="font-semibold">{{ reg.referencia.codigo }}</span>
+                <span class="text-sm text-[#4e4632]">x{{ reg.cantidad }}</span>
+                <span class="text-xs text-[#807660] ml-auto">{{ reg.hora|time:"H:i" }}</span>
+                {% if not reg.sticker_impreso %}
+                <a href="{% url 'produccion:imprimir_sticker' reg.id %}" target="_blank" class="text-[#745b00] hover:bg-[#f9c80e]/20 p-1 rounded-lg" title="Imprimir sticker">
+                    <span class="material-symbols-outlined text-lg">print</span>
+                </a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-sm text-[#4e4632] text-center py-4">Sin registros hoy. Toca una referencia para comenzar.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function registrarProduccion(refId, estacionId) {
+    const btn = document.getElementById('btn-' + refId);
+    btn.classList.add('pulse');
+
+    try {
+        const res = await fetch('/produccion/api/registrar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({
+                referencia_id: refId,
+                estacion_id: estacionId,
+                cantidad: 1,
+            })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+            actualizarUltimos(data);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error de conexion');
+    }
+
+    setTimeout(() => btn.classList.remove('pulse'), 300);
+}
+
+function actualizarUltimos(data) {
+    const container = document.getElementById('ultimos-registros');
+    const colorClass = data.tipo === 'Oro' ? 'bg-[#f9c80e]/10' : 'bg-gray-100';
+    const iconColor = data.tipo === 'Oro' ? 'text-[#745b00]' : 'text-gray-500';
+    const icon = data.tipo === 'Oro' ? 'diamond' : 'circle';
+
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-3 p-3 rounded-xl slide-in ' + colorClass;
+    div.innerHTML = `
+        <span class="material-symbols-outlined ${iconColor}">${icon}</span>
+        <span class="font-semibold">${data.referencia}</span>
+        <span class="text-sm text-[#4e4632]">x${data.cantidad}</span>
+        <span class="text-xs text-[#807660] ml-auto">${data.hora}</span>
+        <a href="/produccion/imprimir-sticker/${data.id}/" target="_blank" class="text-[#745b00] hover:bg-[#f9c80e]/20 p-1 rounded-lg">
+            <span class="material-symbols-outlined text-lg">print</span>
+        </a>
+    `;
+    container.insertBefore(div, container.firstChild);
+
+    if (container.children.length > 50) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+function cambiarEstacion(estacionId) {
+    const url = new URL(window.location);
+    url.searchParams.set('estacion', estacionId);
+    window.location = url.toString();
+}
+</script>
+{% endblock %}

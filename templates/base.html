@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Lumina ERP - Manufactura{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#745b00",
+                        "primary-container": "#f9c80e",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#6b5400",
+                        "primary-fixed": "#ffe08a",
+                        "primary-fixed-dim": "#f1c100",
+                        "on-primary-fixed": "#241a00",
+                        "on-primary-fixed-variant": "#574400",
+                        "secondary": "#545f73",
+                        "secondary-container": "#d5e0f8",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#586377",
+                        "tertiary": "#006878",
+                        "tertiary-container": "#3ae0ff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#00606f",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9ff",
+                        "on-background": "#0b1c30",
+                        "surface": "#f8f9ff",
+                        "surface-bright": "#f8f9ff",
+                        "surface-dim": "#cbdbf5",
+                        "surface-container": "#e5eeff",
+                        "surface-container-low": "#eff4ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "surface-variant": "#d3e4fe",
+                        "on-surface": "#0b1c30",
+                        "on-surface-variant": "#4e4632",
+                        "outline": "#807660",
+                        "outline-variant": "#d1c5ab",
+                        "inverse-surface": "#213145",
+                        "inverse-on-surface": "#eaf1ff",
+                        "inverse-primary": "#f1c100",
+                    },
+                    spacing: {
+                        "sidebar-width": "80px",
+                        "container-max-width": "1440px",
+                    },
+                    fontFamily: {
+                        "headline": ["Hanken Grotesk", "sans-serif"],
+                        "body": ["Hanken Grotesk", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Hanken Grotesk', sans-serif; background: #f1f5f9; color: #0b1c30; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-size: 24px; line-height: 1; }
+        .card { background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid rgba(209,197,171,0.2); }
+        .sidebar-link { @apply flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 text-[#4e4632]; }
+        .sidebar-link:hover { @apply bg-[#e5eeff]; }
+        .sidebar-link.active { @apply bg-[#f9c80e] text-[#6b5400] shadow-sm; }
+        .btn-primary { @apply bg-[#f9c80e] text-[#6b5400] font-semibold rounded-xl px-4 py-2 hover:brightness-95 transition-all shadow-sm; }
+        .btn-danger { @apply bg-[#ba1a1a] text-white font-semibold rounded-xl px-4 py-2 hover:brightness-90 transition-all; }
+        .btn-outline { @apply bg-white border border-[#d1c5ab] text-[#4e4632] font-semibold rounded-xl px-4 py-2 hover:bg-[#e5eeff] transition-all; }
+        .badge-success { @apply bg-[#10854e]/10 text-[#10854e] px-2 py-0.5 rounded-full text-xs font-bold; }
+        .badge-warning { @apply bg-[#f9c80e]/20 text-[#6b5400] px-2 py-0.5 rounded-full text-xs font-bold; }
+        .badge-error { @apply bg-[#ba1a1a]/10 text-[#ba1a1a] px-2 py-0.5 rounded-full text-xs font-bold; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen">
+    {% include 'components/_sidebar.html' %}
+    <div class="ml-[80px] min-h-screen flex flex-col">
+        {% include 'components/_topbar.html' %}
+        <main class="flex-1 p-6 max-w-[1440px] mx-auto w-full">
+            {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for msg in messages %}
+                <div class="px-4 py-3 rounded-xl text-sm font-medium {% if msg.tags == 'success' %}bg-green-100 text-green-800{% elif msg.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ msg }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        document.querySelectorAll('.sidebar-link').forEach(el => {
+            if (el.dataset.url && window.location.pathname.startsWith(el.dataset.url)) {
+                el.classList.add('active');
+            }
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

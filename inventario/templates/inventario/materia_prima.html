@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Materia Prima - Lumina ERP{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+    <div>
+        <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Inventario de Materia Prima</h2>
+        <p class="text-sm text-[#4e4632]">Espuma, rollos y tela</p>
+    </div>
+    <button onclick="document.getElementById('form-mp').classList.toggle('hidden')" class="btn-primary flex items-center gap-2">
+        <span class="material-symbols-outlined">add</span>
+        Registrar Entrada
+    </button>
+</div>
+
+<div id="form-mp" class="card p-6 mb-6 hidden">
+    <h3 class="font-bold text-lg mb-4">Nuevo Registro de Materia Prima</h3>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Tipo</label>
+                <select name="tipo" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none" required>
+                    <option value="espuma">Espuma</option>
+                    <option value="rollo">Rollo</option>
+                    <option value="tela">Tela</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Cantidad (kg)</label>
+                <input type="number" name="cantidad_kg" step="0.001" value="0" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Cantidad (Unidades)</label>
+                <input type="number" name="cantidad_unidades" step="0.01" value="0" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Descripcion</label>
+                <input type="text" name="descripcion" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none" placeholder="Lote, proveedor...">
+            </div>
+        </div>
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="document.getElementById('form-mp').classList.add('hidden')" class="btn-outline">Cancelar</button>
+            <button type="submit" class="btn-primary">Registrar</button>
+        </div>
+    </form>
+</div>
+
+<div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 md:col-span-4 card p-6 flex flex-col gap-3">
+        <div class="bg-amber-50 p-3 rounded-lg text-[#745b00] w-fit">
+            <span class="material-symbols-outlined">layers</span>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Saldo Espuma</p>
+            <h3 class="text-2xl font-bold mt-1">{{ saldo_espuma|floatformat:2 }}</h3>
+            <p class="text-xs text-[#807660] mt-1">kilogramos</p>
+        </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-4 card p-6 flex flex-col gap-3">
+        <div class="bg-blue-50 p-3 rounded-lg text-blue-700 w-fit">
+            <span class="material-symbols-outlined">all_inbox</span>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Saldo Rollos</p>
+            <h3 class="text-2xl font-bold mt-1">{{ saldo_rollos|floatformat:2 }}</h3>
+            <p class="text-xs text-[#807660] mt-1">unidades</p>
+        </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-4 card p-6 flex flex-col gap-3">
+        <div class="bg-purple-50 p-3 rounded-lg text-purple-700 w-fit">
+            <span class="material-symbols-outlined">texture</span>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Saldo Tela</p>
+            <h3 class="text-2xl font-bold mt-1">{{ saldo_tela|floatformat:2 }}</h3>
+            <p class="text-xs text-[#807660] mt-1">kilogramos</p>
+        </div>
+    </div>
+</div>
+
+<div class="card p-6 mt-6">
+    <h3 class="font-bold text-lg mb-4">Registros de Entrada</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Fecha</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Tipo</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Kg</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Unidades</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Descripcion</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Registrado por</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for r in registros %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">{{ r.fecha|date:"d/m/Y H:i" }}</td>
+                    <td class="px-4 py-3 text-sm font-semibold">{{ r.get_tipo_display }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ r.cantidad_kg|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ r.cantidad_unidades|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-sm text-[#4e4632]">{{ r.descripcion }}</td>
+                    <td class="px-4 py-3 text-sm">{{ r.registrado_por.username|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-8 text-[#4e4632]">Sin registros. Agrega tu primera entrada de materia prima.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

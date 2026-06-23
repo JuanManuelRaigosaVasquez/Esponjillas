@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Lumina ERP{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Dashboard de Produccion</h2>
+    <p class="text-sm text-[#4e4632]">{{ hoy|date:"l d F Y" }}</p>
+</div>
+
+<div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 md:col-span-3 card p-6 flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+            <div class="bg-[#f9c80e]/20 p-3 rounded-lg text-[#745b00]">
+                <span class="material-symbols-outlined">precision_manufacturing</span>
+            </div>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Produccion Hoy</p>
+            <h3 class="text-3xl font-bold mt-1">{{ total_hoy }}</h3>
+            <p class="text-xs text-[#807660] mt-1">unidades totales</p>
+        </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-3 card p-6 flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+            <div class="bg-green-100 p-3 rounded-lg text-green-700">
+                <span class="material-symbols-outlined">inventory_2</span>
+            </div>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Referencias Activas</p>
+            <h3 class="text-3xl font-bold mt-1">{{ stock_data|length }}</h3>
+            <p class="text-xs text-[#807660] mt-1">en catalogo</p>
+        </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-3 card p-6 flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+            <div class="bg-red-100 p-3 rounded-lg text-red-700">
+                <span class="material-symbols-outlined">warning</span>
+            </div>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Stock Critico</p>
+            <h3 class="text-3xl font-bold mt-1">
+                {% with critical=0 %}
+                {% for s in stock_data %}{% if s.stock < 10 %}{{ forloop.counter }}{% endif %}{% endfor %}
+                {% endwith %}
+                0
+            </h3>
+            <p class="text-xs text-[#807660] mt-1">bajo 10 unidades</p>
+        </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-3 card p-6 flex flex-col gap-3">
+        <div class="bg-blue-100 p-3 rounded-lg text-blue-700">
+            <span class="material-symbols-outlined">schedule</span>
+        </div>
+        <div>
+            <p class="text-xs text-[#4e4632] uppercase font-semibold">Estaciones</p>
+            <h3 class="text-3xl font-bold mt-1">{{ por_estacion|length }}</h3>
+            <p class="text-xs text-[#807660] mt-1">activas</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-12 gap-6 mt-6">
+    <div class="col-span-12 lg:col-span-6 card p-6">
+        <h3 class="font-bold text-lg mb-4">Produccion por Estacion (Hoy)</h3>
+        <div class="space-y-3">
+            {% for e in por_estacion %}
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold w-24">{{ e.estacion__nombre }}</span>
+                <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-[#f9c80e] rounded-full" style="width: {% widthratio e.total total_hoy 100 %}%"></div>
+                </div>
+                <span class="text-sm font-bold w-12 text-right">{{ e.total }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-[#4e4632] text-center py-8">Sin produccion hoy</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-span-12 lg:col-span-6 card p-6">
+        <h3 class="font-bold text-lg mb-4">Produccion por Referencia (Hoy)</h3>
+        <div class="space-y-3">
+            {% for r in por_referencia %}
+            <div class="flex items-center gap-3">
+                <span class="text-xs w-20 {% if r.referencia__tipo == 'oro' %}text-[#745b00] font-bold{% else %}text-gray-500{% endif %}">
+                    <span class="material-symbols-outlined text-sm align-middle">{% if r.referencia__tipo == 'oro' %}diamond{% else %}circle{% endif %}</span>
+                    {{ r.referencia__codigo }}
+                </span>
+                <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full {% if r.referencia__tipo == 'oro' %}bg-[#f9c80e]{% else %}bg-gray-400{% endif %} rounded-full"
+                         style="width: {% widthratio r.total total_hoy 100 %}%"></div>
+                </div>
+                <span class="text-sm font-bold w-12 text-right">{{ r.total }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-[#4e4632] text-center py-8">Sin produccion hoy</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card p-6 mt-6">
+    <h3 class="font-bold text-lg mb-4">Stock Actual por Referencia</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Referencia</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Tipo</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Stock</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Estado</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for s in stock_data %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-semibold">{{ s.ref.codigo }}</td>
+                    <td class="px-4 py-3 text-xs">
+                        <span class="px-2 py-1 rounded-full {% if s.ref.tipo == 'oro' %}bg-[#f9c80e]/20 text-[#745b00]{% else %}bg-gray-100 text-gray-600{% endif %} font-bold">
+                            {{ s.ref.get_tipo_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm font-bold text-right">{{ s.stock }}</td>
+                    <td class="px-4 py-3">
+                        {% if s.stock < 10 %}
+                        <span class="badge-error">Critico</span>
+                        {% elif s.stock < 50 %}
+                        <span class="badge-warning">Bajo</span>
+                        {% else %}
+                        <span class="badge-success">OK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card p-6 mt-6">
+    <h3 class="font-bold text-lg mb-4">Ultimos Movimientos de Inventario</h3>
+    <div class="space-y-2">
+        {% for m in ultimos_movimientos %}
+        <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50">
+            <span class="material-symbols-outlined {% if m.tipo == 'entrada' %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if m.tipo == 'entrada' %}add_circle{% else %}remove_circle{% endif %}
+            </span>
+            <div class="flex-1">
+                <p class="text-sm font-semibold">{{ m.get_tipo_display }} - {{ m.referencia.codigo }} x{{ m.cantidad }}</p>
+                <p class="text-xs text-[#807660]">{{ m.origen|truncatechars:60 }}</p>
+            </div>
+            <span class="text-xs text-[#807660]">{{ m.fecha|date:"d/m H:i" }}</span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-[#4e4632] text-center py-8">Sin movimientos registrados</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Tercerizacion - Lumina ERP{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+    <div>
+        <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Ordenes de Tercerizacion</h2>
+        <p class="text-sm text-[#4e4632]">{{ abiertas }} abierta{{ abiertas|pluralize:"s" }} | {{ cerradas }} cerrada{{ cerradas|pluralize:"s" }}</p>
+    </div>
+    <a href="{% url 'tercerizacion:crear' %}" class="btn-primary flex items-center gap-2">
+        <span class="material-symbols-outlined">add</span>
+        Nueva Orden
+    </a>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Consecutivo</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Referencia</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Salida</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Esperado</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Retorno</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Diferencia</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Estado</th>
+                    <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Fecha</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for o in ordenes %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-bold text-[#745b00]">{{ o.consecutivo }}</td>
+                    <td class="px-4 py-3 text-sm">{{ o.referencia.codigo }} - {{ o.referencia.nombre }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ o.cantidad_salida }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ o.cantidad_esperada }}</td>
+                    <td class="px-4 py-3 text-sm text-right">{{ o.cantidad_retorno|default:"-" }}</td>
+                    <td class="px-4 py-3 text-sm text-right">
+                        {% if o.estado == 'cerrada' %}
+                            {% with d=o.diferencia %}
+                            {% if d == 0 %}
+                            <span class="text-green-600 font-bold">0</span>
+                            {% elif d > 0 %}
+                            <span class="text-red-600 font-bold">-{{ d }}</span>
+                            {% else %}
+                            <span class="text-blue-600 font-bold">+{{ d|stringformat:"d"|slice:"1:" }}</span>
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if o.estado == 'abierta' %}
+                        <span class="badge-warning">Abierta</span>
+                        {% else %}
+                        <span class="badge-success">Cerrada</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-xs text-[#807660]">{{ o.fecha_salida|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3">
+                        <a href="{% url 'tercerizacion:detalle' o.id %}" class="text-[#745b00] hover:underline text-sm font-semibold">
+                            Ver
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center py-8 text-[#4e4632]">Sin ordenes registradas</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

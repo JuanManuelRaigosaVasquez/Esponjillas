@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Orden - Tercerizacion{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-6">Nueva Orden de Tercerizacion</h2>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Referencia</label>
+                <select name="referencia" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none" required>
+                    <option value="">Selecciona...</option>
+                    {% for ref in referencias %}
+                    <option value="{{ ref.id }}">{{ ref.codigo }} - {{ ref.nombre }} ({{ ref.get_tipo_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Cantidad Salida</label>
+                    <input type="number" name="cantidad_salida" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none" min="1" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Retorno Esperado (pacas)</label>
+                    <input type="number" name="cantidad_esperada" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none" min="1" required>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-[#4e4632] mb-1 uppercase">Observaciones</label>
+                <textarea name="observaciones" rows="3" class="w-full rounded-xl border border-[#d1c5ab] px-4 py-2.5 focus:ring-2 focus:ring-[#f9c80e] outline-none"></textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <a href="{% url 'tercerizacion:lista' %}" class="btn-outline">Cancelar</a>
+                <button type="submit" class="btn-primary">Crear Orden</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

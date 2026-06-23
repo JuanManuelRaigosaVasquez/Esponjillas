@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Inventario - Lumina ERP{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Inventario en Proceso</h2>
+    <p class="text-sm text-[#4e4632]">Stock actual por referencia y movimientos recientes</p>
+</div>
+
+<div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 lg:col-span-8 card p-6">
+        <h3 class="font-bold text-lg mb-4">Stock por Referencia</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Referencia</th>
+                        <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Nombre</th>
+                        <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Tipo</th>
+                        <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632] text-right">Stock</th>
+                        <th class="px-4 py-3 text-xs uppercase tracking-wider text-[#4e4632]">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in stock_data %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-semibold">{{ s.codigo }}</td>
+                        <td class="px-4 py-3 text-sm">{{ s.nombre }}</td>
+                        <td class="px-4 py-3 text-xs">
+                            <span class="px-2 py-1 rounded-full font-bold {% if s.tipo == 'oro' %}bg-[#f9c80e]/20 text-[#745b00]{% else %}bg-gray-200 text-gray-600{% endif %}">
+                                {{ s.tipo_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm font-bold text-right">{{ s.stock }}</td>
+                        <td class="px-4 py-3">
+                            {% if s.stock < 10 %}
+                            <span class="badge-error">Critico</span>
+                            {% elif s.stock < 50 %}
+                            <span class="badge-warning">Bajo</span>
+                            {% else %}
+                            <span class="badge-success">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-8 text-[#4e4632]">Sin referencias registradas</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-span-12 lg:col-span-4 card p-6">
+        <h3 class="font-bold text-lg mb-4">Movimientos Recientes</h3>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for m in movimientos %}
+            <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50">
+                <span class="material-symbols-outlined mt-0.5 {% if m.tipo == 'entrada' %}text-green-600{% else %}text-red-600{% endif %}">
+                    {% if m.tipo == 'entrada' %}add_circle{% else %}remove_circle{% endif %}
+                </span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold">
+                        {{ m.get_tipo_display }} - {{ m.referencia.codigo }} x{{ m.cantidad }}
+                    </p>
+                    <p class="text-xs text-[#807660] truncate">{{ m.origen }}</p>
+                    {% if m.estacion %}
+                    <p class="text-xs text-[#745b00] font-semibold">{{ m.estacion.nombre }}</p>
+                    {% endif %}
+                </div>
+                <span class="text-xs text-[#807660] whitespace-nowrap">{{ m.fecha|date:"d/m H:i" }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-[#4e4632] text-center py-8">Sin movimientos registrados</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+<aside class="fixed left-0 top-0 h-full flex flex-col items-center py-6 gap-4 z-40 bg-white w-[80px] border-r border-[#d1c5ab]/30">
+    <div class="mb-6">
+        <div class="w-10 h-10 bg-[#f9c80e] rounded-lg flex items-center justify-center text-[#6b5400]">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+        </div>
+    </div>
+    <nav class="flex flex-col gap-3 flex-1">
+        <a href="{% url 'produccion:operator' %}" class="sidebar-link" data-url="/produccion/operator" title="Produccion">
+            <span class="material-symbols-outlined">touch_app</span>
+        </a>
+        <a href="{% url 'produccion:dashboard' %}" class="sidebar-link" data-url="/produccion/dashboard" title="Dashboard">
+            <span class="material-symbols-outlined">dashboard</span>
+        </a>
+        <a href="{% url 'inventario:stock' %}" class="sidebar-link" data-url="/inventario" title="Inventario">
+            <span class="material-symbols-outlined">inventory_2</span>
+        </a>
+        <a href="{% url 'tercerizacion:lista' %}" class="sidebar-link" data-url="/tercerizacion" title="Tercerizacion">
+            <span class="material-symbols-outlined">assignment</span>
+        </a>
+        <a href="{% url 'inventario:materia_prima' %}" class="sidebar-link" data-url="/inventario/materia-prima" title="Materia Prima">
+            <span class="material-symbols-outlined">package</span>
+        </a>
+        <a href="{% url 'costos:reporte' %}" class="sidebar-link" data-url="/costos" title="Costos">
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+        </a>
+    </nav>
+    <div class="mt-auto flex flex-col gap-3 pb-2">
+        <a href="/admin/" class="sidebar-link" title="Admin">
+            <span class="material-symbols-outlined">settings</span>
+        </a>
+        {% if user.is_authenticated %}
+        <form method="post" action="{% url 'produccion:logout' %}" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link" title="Salir">
+                <span class="material-symbols-outlined text-[#ba1a1a]">logout</span>
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</aside>
