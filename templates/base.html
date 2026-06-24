@@ -82,6 +82,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen">
+    {% block layout %}
     {% include 'components/_sidebar.html' %}
     <div class="ml-[80px] min-h-screen flex flex-col">
         {% include 'components/_topbar.html' %}
@@ -98,6 +99,8 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    {% endblock layout %}
+    {% block standalone %}{% endblock %}
     <script>
         document.querySelectorAll('.sidebar-link').forEach(el => {
             if (el.dataset.url && window.location.pathname.startsWith(el.dataset.url)) {
