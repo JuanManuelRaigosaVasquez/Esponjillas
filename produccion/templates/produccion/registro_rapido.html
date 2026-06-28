@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% block title %}Registro Rapido - Lumina{% endblock %}
+{% block layout %}{% endblock %}
+{% block extra_head %}
+<style>
+    .touch-btn {
+        min-height: 110px;
+        font-size: 1.4rem;
+        transition: all 0.1s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .touch-btn:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    .touch-btn.gold { background: linear-gradient(135deg, #f9c80e, #e6b800); color: #6b5400; }
+    .touch-btn.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #333; }
+    .touch-btn.green { background: linear-gradient(135deg, #4ade80, #22c55e); color: #14532d; }
+    .touch-btn.worker { background: #fff; color: #0b1c30; border: 2px solid #d1c5ab; }
+    .touch-btn.worker.active { border-color: #f9c80e; background: #fffdf0; }
+    .pulse { animation: pulse 0.3s ease; }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .slide-in {
+        animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    .worker-avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f9c80e, #e6b800);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 1rem; color: #6b5400;
+    }
+    .sponge-icon { width: 44px; height: 44px; }
+    .sponge-icon-sm { width: 24px; height: 24px; }
+    .kiosk-header {
+        position: sticky; top: 0; z-index: 30;
+        background: #fff; border-bottom: 1px solid rgba(209,197,171,0.3);
+        margin-bottom: 24px;
+    }
+    .kiosk-header-inner {
+        max-width: 1440px; margin: 0 auto;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 20px;
+    }
+</style>
+{% endblock %}
+{% block standalone %}
+<div class="kiosk-header">
+    <div class="kiosk-header-inner">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-[#f9c80e] rounded-lg flex items-center justify-center text-[#6b5400]">
+                <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+            </div>
+            <span class="font-bold text-lg text-[#745b00]">Lumina</span>
+            <span class="text-xs text-[#807660] ml-2">{{ hoy|date:"d M" }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <label class="text-xs font-semibold text-[#4e4632] uppercase hidden sm:inline">Estacion:</label>
+            <select id="estacion-select" class="rounded-xl border border-[#d1c5ab] px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-[#f9c80e] outline-none" onchange="cambiarEstacion(this.value)">
+                {% for est in estaciones %}
+                <option value="{{ est.id }}" {% if est.id == estacion_actual.id %}selected{% endif %}>
+                    {{ est.nombre }} ({{ est.get_tipo_movimiento_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <a href="{% url 'produccion:login' %}" class="p-2 rounded-lg hover:bg-[#e5eeff] transition-colors" title="Supervisor">
+                <span class="material-symbols-outlined text-[#4e4632]">lock</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-4xl mx-auto px-4 pb-8">
+
+    {% if estacion_actual %}
+    <div class="mb-4">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
+            {% if estacion_actual.tipo_movimiento == 'suma' %}bg-green-100 text-green-700
+            {% elif estacion_actual.tipo_movimiento == 'resta' %}bg-red-100 text-red-700
+            {% else %}bg-blue-100 text-blue-700{% endif %}">
+            <span class="material-symbols-outlined text-lg">
+                {% if estacion_actual.tipo_movimiento == 'suma' %}add_circle
+                {% elif estacion_actual.tipo_movimiento == 'resta' %}remove_circle
+                {% else %}info{% endif %}
+            </span>
+            {{ estacion_actual.get_tipo_movimiento_display }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="worker-section" class="mb-6">
+        <h3 class="text-sm font-semibold text-[#4e4632] uppercase tracking-wide mb-3" id="worker-label">Selecciona tu nombre</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2" id="worker-grid">
+            {% for t in trabajadores %}
+            <button class="touch-btn worker rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 shadow-sm"
+                onclick="seleccionarTrabajador({{ t.id }}, '{{ t.nombre_completo|escapejs }}', '{{ t.iniciales|escapejs }}')"
+                id="worker-btn-{{ t.id }}">
+                <div class="worker-avatar text-sm">{{ t.iniciales }}</div>
+                <span class="font-semibold text-xs text-center leading-tight">{{ t.nombre_completo }}</span>
+            </button>
+            {% empty %}
+            <div class="col-span-full text-center py-8 text-[#4e4632]">
+                <span class="material-symbols-outlined text-4xl mb-2 block">groups</span>
+                <p class="text-sm">No hay trabajadores activos.</p>
+                <a href="{% url 'trabajadores:crear' %}" class="btn-primary inline-flex items-center gap-1 mt-2 text-sm">
+                    <span class="material-symbols-outlined text-base">person_add</span>
+                    Agregar
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="product-section" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-[#4e4632] uppercase tracking-wide">Productos</h3>
+            <div class="flex items-center gap-2" id="selected-worker-badge"></div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="referencias-grid">
+            {% for ref in referencias %}
+            <button class="touch-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-md border border-white/20 card
+                {% if ref.codigo == 'ESP-SV-005' %}green{% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}gold{% else %}silver{% endif %}"
+                onclick="registrarProduccion({{ ref.id }})"
+                id="btn-{{ ref.id }}">
+                {% if ref.codigo == 'ESP-SV-005' %}
+                    <img src="/static/img/esponjas/verde.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+                {% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}
+                    <img src="/static/img/esponjas/oro.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+                {% else %}
+                    <img src="/static/img/esponjas/brillo.svg" alt="{{ ref.nombre }}" class="sponge-icon">
+                {% endif %}
+                <span class="font-bold text-sm uppercase tracking-wide">{{ ref.nombre }}</span>
+                <span class="text-xs opacity-70">{{ ref.codigo }}</span>
+            </button>
+            {% empty %}
+            <div class="col-span-full text-center py-12 text-[#4e4632]">
+                <span class="material-symbols-outlined text-6xl mb-4 block">inventory_2</span>
+                <p class="text-lg">No hay referencias activas.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card p-6 mt-6">
+        <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined">history</span>
+            Ultimos Registros Hoy
+        </h3>
+        <div class="space-y-2 max-h-80 overflow-y-auto" id="ultimos-registros">
+            {% for reg in ultimos %}
+            <div class="flex items-center gap-3 p-3 rounded-xl {% if reg.referencia.codigo == 'ESP-SV-005' %}bg-green-100{% elif reg.referencia.codigo == 'ESP-ORO-003' or reg.referencia.codigo == 'ESP-DU-004' %}bg-[#f9c80e]/10{% else %}bg-gray-100{% endif %}">
+                {% if reg.referencia.codigo == 'ESP-SV-005' %}
+                    <img src="/static/img/esponjas/verde.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% elif reg.referencia.codigo == 'ESP-ORO-003' or reg.referencia.codigo == 'ESP-DU-004' %}
+                    <img src="/static/img/esponjas/oro.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% else %}
+                    <img src="/static/img/esponjas/brillo.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
+                {% endif %}
+                <span class="w-6 h-6 rounded-full bg-[#f9c80e] text-[#6b5400] text-xs font-bold flex items-center justify-center">{{ reg.trabajador.iniciales }}</span>
+                <span class="font-semibold text-xs">{{ reg.trabajador.nombre_completo|truncatechars:14 }}</span>
+                <span class="font-semibold text-sm">{{ reg.referencia.codigo }}</span>
+                <span class="text-sm text-[#4e4632]">x{{ reg.cantidad }}</span>
+                <span class="text-xs text-[#807660] ml-auto">{{ reg.hora|time:"H:i" }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-[#4e4632] text-center py-4">Sin registros hoy.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedWorkerId = null;
+let selectedWorkerName = '';
+let selectedWorkerIniciales = '';
+
+function seleccionarTrabajador(id, nombre, iniciales) {
+    selectedWorkerId = id;
+    selectedWorkerName = nombre;
+    selectedWorkerIniciales = iniciales;
+
+    document.querySelectorAll('#worker-grid .touch-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('worker-btn-' + id);
+    if (btn) btn.classList.add('active');
+
+    document.getElementById('worker-section').classList.add('hidden');
+    document.getElementById('product-section').classList.remove('hidden');
+
+    document.getElementById('selected-worker-badge').innerHTML = `
+        <div class="worker-avatar text-xs" style="width:32px;height:32px;font-size:0.75rem;">${iniciales}</div>
+        <span class="font-bold text-sm">${nombre}</span>
+        <button onclick="deseleccionarTrabajador()" class="text-xs text-[#ba1a1a] hover:underline px-2 py-1 rounded-lg hover:bg-red-50">Cambiar</button>
+    `;
+}
+
+function deseleccionarTrabajador() {
+    selectedWorkerId = null;
+    selectedWorkerName = '';
+    selectedWorkerIniciales = '';
+    document.querySelectorAll('#worker-grid .touch-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('worker-section').classList.remove('hidden');
+    document.getElementById('product-section').classList.add('hidden');
+}
+
+async function registrarProduccion(refId) {
+    if (!selectedWorkerId) {
+        alert('Selecciona un trabajador primero');
+        return;
+    }
+    const estacionId = {{ estacion_actual.id|default:0 }};
+    if (!estacionId) {
+        alert('Selecciona una estacion');
+        return;
+    }
+
+    const btn = document.getElementById('btn-' + refId);
+    if (btn) btn.classList.add('pulse');
+
+    try {
+        const res = await fetch('/produccion/api/registrar-rapido/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                trabajador_id: selectedWorkerId,
+                referencia_id: refId,
+                estacion_id: estacionId,
+                cantidad: 1,
+            })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+            actualizarUltimos(data);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error de conexion');
+    }
+
+    setTimeout(() => { if (btn) btn.classList.remove('pulse'); }, 300);
+}
+
+function actualizarUltimos(data) {
+    const container = document.getElementById('ultimos-registros');
+    let colorClass, iconSrc;
+
+    if (data.codigo === 'ESP-SV-005') {
+        colorClass = 'bg-green-100';
+        iconSrc = '/static/img/esponjas/verde.svg';
+    } else if (data.codigo === 'ESP-ORO-003' || data.codigo === 'ESP-DU-004') {
+        colorClass = 'bg-[#f9c80e]/10';
+        iconSrc = '/static/img/esponjas/oro.svg';
+    } else {
+        colorClass = 'bg-gray-100';
+        iconSrc = '/static/img/esponjas/brillo.svg';
+    }
+
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-3 p-3 rounded-xl slide-in ' + colorClass;
+    div.innerHTML = `
+        <img src="${iconSrc}" alt="${data.referencia}" class="sponge-icon-sm">
+        <span class="w-6 h-6 rounded-full bg-[#f9c80e] text-[#6b5400] text-xs font-bold flex items-center justify-center">${selectedWorkerIniciales}</span>
+        <span class="font-semibold text-xs">${selectedWorkerName.substring(0,14)}</span>
+        <span class="font-semibold text-sm">${data.referencia}</span>
+        <span class="text-sm text-[#4e4632]">x${data.cantidad}</span>
+        <span class="text-xs text-[#807660] ml-auto">${data.hora}</span>
+    `;
+    container.insertBefore(div, container.firstChild);
+
+    while (container.children.length > 50) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+function cambiarEstacion(estacionId) {
+    const url = new URL(window.location);
+    url.searchParams.set('estacion', estacionId);
+    window.location = url.toString();
+}
+</script>
+{% endblock %}

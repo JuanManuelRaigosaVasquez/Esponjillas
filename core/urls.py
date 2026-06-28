@@ -4,9 +4,10 @@ from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', lambda r: redirect('produccion:operator')),
+    path('', lambda r: redirect('produccion:registro_rapido')),
     path('', include('produccion.urls')),
     path('inventario/', include('inventario.urls')),
     path('tercerizacion/', include('tercerizacion.urls')),
     path('costos/', include('costos.urls')),
+    path('trabajadores/', include('trabajadores.urls')),
 ]

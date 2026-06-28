@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Trabajador - Lumina{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'trabajadores:lista' %}" class="p-2 rounded-lg hover:bg-[#e5eeff] transition-colors">
+            <span class="material-symbols-outlined text-[#4e4632]">arrow_back</span>
+        </a>
+        <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Eliminar Trabajador</h2>
+    </div>
+
+    <div class="card p-6 text-center">
+        <span class="material-symbols-outlined text-5xl text-[#ba1a1a] mb-4 block">warning</span>
+        <p class="text-lg font-semibold text-[#0b1c30] mb-2">Confirmar eliminacion</p>
+        <p class="text-sm text-[#4e4632] mb-1">
+            Estas a punto de eliminar permanentemente a:
+        </p>
+        <p class="text-lg font-bold text-[#ba1a1a] mb-6">{{ trabajador.nombre_completo }}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex gap-3 justify-center">
+                <button type="submit" class="btn-danger">Eliminar permanentemente</button>
+                <a href="{% url 'trabajadores:lista' %}" class="btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

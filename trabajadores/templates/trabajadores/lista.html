@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Trabajadores - Lumina{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Trabajadores</h2>
+            <p class="text-sm text-[#4e4632]">{{ activos }} activo{{ activos|pluralize }} &middot; {{ inactivos }} inactivo{{ inactivos|pluralize }}</p>
+        </div>
+        <a href="{% url 'trabajadores:crear' %}" class="btn-primary flex items-center gap-2">
+            <span class="material-symbols-outlined">person_add</span>
+            Nuevo Trabajador
+        </a>
+    </div>
+
+    <div class="card overflow-hidden">
+        {% if trabajadores %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-[#f1f5f9] text-left text-xs font-semibold text-[#4e4632] uppercase tracking-wider">
+                        <th class="px-4 py-3">Nombre</th>
+                        <th class="px-4 py-3">Cedula</th>
+                        <th class="px-4 py-3">Telefono</th>
+                        <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#d1c5ab]/20">
+                    {% for t in trabajadores %}
+                    <tr class="hover:bg-[#e5eeff]/30 transition-colors">
+                        <td class="px-4 py-3 font-medium">{{ t.nombre_completo }}</td>
+                        <td class="px-4 py-3 text-[#4e4632]">{{ t.cedula|default:'—' }}</td>
+                        <td class="px-4 py-3 text-[#4e4632]">{{ t.telefono|default:'—' }}</td>
+                        <td class="px-4 py-3">
+                            {% if t.activo %}
+                            <span class="badge-success">Activo</span>
+                            {% else %}
+                            <span class="badge-error">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <a href="{% url 'trabajadores:editar' t.id %}" class="p-2 rounded-lg hover:bg-[#e5eeff] transition-colors" title="Editar">
+                                    <span class="material-symbols-outlined text-lg text-[#4e4632]">edit</span>
+                                </a>
+                                <a href="{% url 'trabajadores:eliminar' t.id %}" class="p-2 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar">
+                                    <span class="material-symbols-outlined text-lg text-[#ba1a1a]">delete</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-[#4e4632]">
+            <span class="material-symbols-outlined text-6xl mb-4 block">groups</span>
+            <p class="text-lg">No hay trabajadores registrados.</p>
+            <a href="{% url 'trabajadores:crear' %}" class="btn-primary inline-flex items-center gap-2 mt-4">
+                <span class="material-symbols-outlined">person_add</span>
+                Crear primer trabajador
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

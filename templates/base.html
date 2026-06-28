@@ -69,9 +69,23 @@
         body { font-family: 'Hanken Grotesk', sans-serif; background: #f1f5f9; color: #0b1c30; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-size: 24px; line-height: 1; }
         .card { background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid rgba(209,197,171,0.2); }
-        .sidebar-link { @apply flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 text-[#4e4632]; }
-        .sidebar-link:hover { @apply bg-[#e5eeff]; }
-        .sidebar-link.active { @apply bg-[#f9c80e] text-[#6b5400] shadow-sm; }
+        .rail { position: fixed; left: 0; top: 0; height: 100%; display: flex; flex-direction: column; align-items: flex-start; width: 80px; background: #fff; border-right: 1px solid rgba(209,197,171,0.3); z-index: 40; transition: width 0.2s ease, box-shadow 0.2s ease; overflow: hidden; padding-top: 24px; padding-bottom: 24px; gap: 4px; }
+        .rail:hover, .rail.is-open { width: 240px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 50; }
+        .rail-header { display: flex; align-items: center; gap: 14px; padding: 0 18px; margin-bottom: 20px; }
+        .rail-logo { width: 40px; height: 40px; min-width: 40px; background: #f9c80e; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #6b5400; }
+        .rail-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .rail-footer { display: flex; flex-direction: column; gap: 2px; width: 100%; margin-top: auto; }
+        .rail-item { display: flex; align-items: center; gap: 14px; width: 56px; height: 48px; padding: 0 18px; border-radius: 14px; margin: 0 12px; color: #4e4632; font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; transition: width 0.2s, background 0.2s, color 0.2s; }
+        .rail:hover .rail-item, .rail.is-open .rail-item { width: calc(100% - 24px); }
+        .rail-item:hover { background: #e5eeff; }
+        .rail-item.active { background: #f9c80e; color: #6b5400; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .rail-label { opacity: 0; transform: translateX(-4px); transition: opacity 0.15s, transform 0.15s; }
+        .rail:hover .rail-label, .rail.is-open .rail-label { opacity: 1; transform: translateX(0); }
+        .rail-label { font-family: 'Hanken Grotesk', sans-serif; font-weight: 600; }
+        @media (min-width: 768px) {
+            .rail:hover { width: 240px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 50; }
+            .rail-toggle { display: none; }
+        }
         .btn-primary { @apply bg-[#f9c80e] text-[#6b5400] font-semibold rounded-xl px-4 py-2 hover:brightness-95 transition-all shadow-sm; }
         .btn-danger { @apply bg-[#ba1a1a] text-white font-semibold rounded-xl px-4 py-2 hover:brightness-90 transition-all; }
         .btn-outline { @apply bg-white border border-[#d1c5ab] text-[#4e4632] font-semibold rounded-xl px-4 py-2 hover:bg-[#e5eeff] transition-all; }
@@ -102,11 +116,32 @@
     {% endblock layout %}
     {% block standalone %}{% endblock %}
     <script>
-        document.querySelectorAll('.sidebar-link').forEach(el => {
+        document.querySelectorAll('.rail-item').forEach(el => {
             if (el.dataset.url && window.location.pathname.startsWith(el.dataset.url)) {
                 el.classList.add('active');
             }
         });
+        var rail = document.getElementById('sidebar');
+        var toggle = document.getElementById('railToggle');
+        if (toggle && rail) {
+            toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                rail.classList.toggle('is-open');
+            });
+            document.addEventListener('click', function(e) {
+                if (rail.classList.contains('is-open')
+                    && !rail.contains(e.target)
+                    && e.target !== toggle
+                    && !toggle.contains(e.target)) {
+                    rail.classList.remove('is-open');
+                }
+            });
+            rail.querySelectorAll('.rail-item').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    rail.classList.remove('is-open');
+                });
+            });
+        }
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

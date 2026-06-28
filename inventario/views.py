@@ -1,14 +1,14 @@
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Sum
 
 from produccion.models import Referencia
 from .models import MovimientoInventario, MateriaPrima
 from .services import stock_actual_por_referencia
+from core.decorators import staff_required
 
 
-@login_required
+@staff_required
 def stock_view(request):
     referencias = Referencia.objects.filter(activo=True)
 
@@ -35,7 +35,7 @@ def stock_view(request):
     return render(request, 'inventario/stock.html', context)
 
 
-@login_required
+@staff_required
 def materia_prima_view(request):
     if request.method == 'POST':
         tipo = request.POST.get('tipo')
@@ -74,7 +74,7 @@ def materia_prima_view(request):
     return render(request, 'inventario/materia_prima.html', context)
 
 
-@login_required
+@staff_required
 def api_stock_actual(request):
     referencias = Referencia.objects.filter(activo=True)
     data = []

@@ -43,7 +43,8 @@ class Estacion(models.Model):
 
 
 class ProduccionRegistro(models.Model):
-    operario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='producciones')
+    operario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='producciones', null=True, blank=True)
+    trabajador = models.ForeignKey('trabajadores.Trabajador', null=True, blank=True, on_delete=models.SET_NULL, related_name='producciones')
     referencia = models.ForeignKey(Referencia, on_delete=models.CASCADE, related_name='producciones')
     estacion = models.ForeignKey(Estacion, on_delete=models.CASCADE, related_name='producciones')
     cantidad = models.PositiveIntegerField(default=1)
@@ -65,4 +66,5 @@ class ProduccionRegistro(models.Model):
         return self.timestamp.time()
 
     def __str__(self):
-        return f"{self.referencia.codigo} x{self.cantidad} - {self.estacion.nombre} [{self.operario.username}] {self.timestamp:%H:%M}"
+        who = self.trabajador.nombre_completo if self.trabajador else (self.operario.username if self.operario else '?')
+        return f"{self.referencia.codigo} x{self.cantidad} - {self.estacion.nombre} [{who}] {self.timestamp:%H:%M}"

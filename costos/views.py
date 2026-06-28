@@ -1,5 +1,4 @@
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Sum
@@ -8,9 +7,10 @@ from .models import CostoProduccion, TarifaOperario
 from .services import calcular_costo_diario
 from produccion.models import Referencia, ProduccionRegistro
 from django.contrib.auth.models import User
+from core.decorators import staff_required
 
 
-@login_required
+@staff_required
 def reporte_view(request):
     fecha = request.GET.get('fecha', timezone.now().date())
 
@@ -38,7 +38,7 @@ def reporte_view(request):
     return render(request, 'costos/reporte.html', context)
 
 
-@login_required
+@staff_required
 def api_calcular(request):
     fecha = request.GET.get('fecha', timezone.now().date())
     if isinstance(fecha, str):

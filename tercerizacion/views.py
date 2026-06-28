@@ -5,9 +5,10 @@ from django.utils import timezone
 
 from produccion.models import Referencia
 from .models import OrdenTercerizacion
+from core.decorators import staff_required
 
 
-@login_required
+@staff_required
 def lista_view(request):
     ordenes = OrdenTercerizacion.objects.select_related('referencia').order_by('-fecha_salida')
     abiertas = ordenes.filter(estado='abierta').count()
@@ -21,7 +22,7 @@ def lista_view(request):
     return render(request, 'tercerizacion/lista.html', context)
 
 
-@login_required
+@staff_required
 def crear_view(request):
     referencias = Referencia.objects.filter(activo=True)
 
@@ -41,7 +42,7 @@ def crear_view(request):
     return render(request, 'tercerizacion/form.html', context)
 
 
-@login_required
+@staff_required
 def detalle_view(request, pk):
     orden = get_object_or_404(OrdenTercerizacion.objects.select_related('referencia'), id=pk)
     diferencia = orden.diferencia()
@@ -52,7 +53,7 @@ def detalle_view(request, pk):
     return render(request, 'tercerizacion/detalle.html', context)
 
 
-@login_required
+@staff_required
 def cerrar_view(request, pk):
     orden = get_object_or_404(OrdenTercerizacion, id=pk)
 

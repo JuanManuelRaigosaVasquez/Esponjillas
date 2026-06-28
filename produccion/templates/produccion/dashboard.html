@@ -1,5 +1,123 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard - Lumina ERP{% endblock %}
+{% block extra_head %}
+<style>
+.worker-card {
+    max-width: 400px;
+    width: 100%;
+    padding: 24px;
+    border-radius: 35px;
+    background: #fff;
+    color: #0b1c30;
+    box-shadow: 0 4px 24px rgba(116,91,0,0.08);
+    border: 1px solid rgba(209,197,171,0.3);
+}
+.worker-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.worker-card .card-logo {
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #0b1c30;
+    font-family: 'Hanken Grotesk', sans-serif;
+}
+.worker-card .card-date {
+    font-size: 0.8em;
+    color: #807660;
+    font-weight: 500;
+}
+.worker-switch {
+    position: relative;
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 20px;
+    padding: 4px;
+    gap: 6px;
+    margin-bottom: 16px;
+    user-select: none;
+}
+.worker-switch input { display: none; }
+.worker-switch label {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 16px;
+    cursor: pointer;
+    color: #4e4632;
+    font-weight: 600;
+    font-size: 0.8em;
+    transition: color 0.3s;
+    position: relative;
+    z-index: 2;
+    white-space: nowrap;
+}
+.worker-switch input:checked + label {
+    color: #6b5400;
+    font-weight: 700;
+}
+.worker-switch .slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    background: linear-gradient(135deg, #f9c80e, #f1c100);
+    border: 1px solid rgba(107,84,0,0.15);
+    border-radius: 16px;
+    z-index: 1;
+    transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                width 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 8px rgba(249,200,14,0.3);
+}
+.price-infos { margin-bottom: 12px; }
+.price-info { display: none; }
+.price-info.active { display: block; }
+.price-info .price {
+    font-size: 1.5em;
+    font-weight: 800;
+    margin-bottom: 2px;
+    color: #0b1c30;
+}
+.price-info .stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+}
+.price-info .amount { color: #4e4632; font-weight: 500; }
+.price-info .change { font-weight: 700; }
+.change.up { color: #10854e; }
+.change.down { color: #ba1a1a; }
+.worker-chart {
+    height: 80px;
+    background: #fffbeb;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+.worker-chart svg {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+.worker-chart svg.active { display: block; }
+.worker-chart path {
+    stroke: #745b00;
+    stroke-width: 1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+    animation: workerDraw 2.5s forwards;
+    fill: rgba(249,200,14,0.25);
+}
+@keyframes workerDraw {
+    to { stroke-dashoffset: 0; }
+}
+</style>
+{% endblock %}
 {% block content %}
 <div class="mb-6">
     <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Dashboard de Produccion</h2>
@@ -62,6 +180,49 @@
         </div>
     </div>
 </div>
+
+{% if trabajadores_data %}
+<div class="grid grid-cols-12 gap-6 mt-6">
+    <div class="col-span-12 flex justify-center">
+        <div class="worker-card" id="workerCard">
+            <div class="card-header">
+                <span class="card-logo">Produccion x Trabajador</span>
+                <span class="card-date">{{ hoy|date:"d M" }}</span>
+            </div>
+
+            <fieldset class="worker-switch" id="workerSwitch">
+                {% for t in trabajadores_data %}
+                <input type="radio" id="wk-{{ forloop.counter }}" name="worker-tab" {% if forloop.first %}checked{% endif %}>
+                <label for="wk-{{ forloop.counter }}" title="{{ t.nombre }}">{{ t.iniciales }}</label>
+                {% endfor %}
+                <div class="slider"></div>
+            </fieldset>
+
+            <div class="price-infos">
+                {% for t in trabajadores_data %}
+                <div class="price-info {% if forloop.first %}active{% endif %}" id="wk-{{ forloop.counter }}-info">
+                    <div class="price">{{ t.total_hoy }} unid.</div>
+                    <div class="stats">
+                        <span class="amount">{{ t.registros_hoy }} registros</span>
+                        <span class="change {% if t.change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {% if t.change_pct >= 0 %}+{% endif %}{{ t.change_pct|floatformat:1 }}%
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="worker-chart">
+                {% for t in trabajadores_data %}
+                <svg id="chart-wk-{{ forloop.counter }}" viewBox="0 0 100 50" preserveAspectRatio="none" class="{% if forloop.first %}active{% endif %}">
+                    <path d="{{ t.svg_path }}" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="grid grid-cols-12 gap-6 mt-6">
     <div class="col-span-12 lg:col-span-6 card p-6">
@@ -175,4 +336,41 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+(function() {
+    var switchEl = document.getElementById('workerSwitch');
+    if (!switchEl) return;
+    var slider = switchEl.querySelector('.slider');
+    var radios = switchEl.querySelectorAll('input[type=radio]');
+
+    function positionSlider() {
+        var checked = switchEl.querySelector('input:checked');
+        if (!checked || !checked.nextElementSibling) return;
+        var label = checked.nextElementSibling;
+        var parentLeft = switchEl.getBoundingClientRect().left;
+        var labelRect = label.getBoundingClientRect();
+        slider.style.left = (labelRect.left - parentLeft) + 'px';
+        slider.style.width = labelRect.width + 'px';
+    }
+
+    positionSlider();
+    window.addEventListener('resize', positionSlider);
+
+    radios.forEach(function(r, i) {
+        r.addEventListener('change', function() {
+            var num = i + 1;
+            positionSlider();
+
+            document.querySelectorAll('.price-info').forEach(function(el) { el.classList.remove('active'); });
+            var info = document.getElementById('wk-' + num + '-info');
+            if (info) info.classList.add('active');
+
+            document.querySelectorAll('.worker-chart svg').forEach(function(el) { el.classList.remove('active'); });
+            var chart = document.getElementById('chart-wk-' + num);
+            if (chart) chart.classList.add('active');
+        });
+    });
+})();
+</script>
 {% endblock %}
