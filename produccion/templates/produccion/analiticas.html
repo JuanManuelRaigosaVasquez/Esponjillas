@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% block title %}Analiticas - Lumina ERP{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .chart-card {
+        background: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        border: 1px solid rgba(209,197,171,0.2);
+        padding: 1.25rem 1.5rem;
+    }
+    .chart-card h3 {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #4e4632;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .chart-card h3 .material-symbols-outlined { font-size: 20px; }
+    .chart-wrap { position: relative; width: 100%; }
+    .chart-h-sm { height: 280px; }
+    .chart-h-md { height: 340px; }
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border: 1px solid #d1c5ab;
+        background: #fff;
+        color: #4e4632;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: 'Hanken Grotesk', sans-serif;
+        white-space: nowrap;
+    }
+    .filter-btn.active { background: #f9c80e; color: #6b5400; border-color: #f9c80e; }
+    .filter-btn:hover:not(.active) { background: #e5eeff; }
+    .loading-overlay {
+        position: absolute; inset: 0; background: rgba(255,255,255,0.6);
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 0.75rem; z-index: 10; pointer-events: none;
+    }
+    .spinner {
+        width: 32px; height: 32px;
+        border: 3px solid #d1c5ab; border-top-color: #f9c80e;
+        border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-extrabold text-[#0b1c30]">Analiticas de Produccion</h1>
+        <p class="text-sm text-[#807660] mt-0.5">{{ hoy|date:"l d F Y"|capfirst }}</p>
+    </div>
+    <div class="flex items-center gap-1.5" id="filter-bar">
+        {% for label, days in filtros %}
+        <button class="filter-btn{% if days == 7 %} active{% endif %}" data-dias="{{ days }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="charts-container">
+
+    <div class="chart-card lg:col-span-2">
+        <h3><span class="material-symbols-outlined">trending_up</span>Produccion Diaria</h3>
+        <div class="chart-wrap chart-h-md" style="position:relative">
+            <canvas id="chart-diario"></canvas>
+            <div class="loading-overlay" id="loading-diario" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3><span class="material-symbols-outlined">pie_chart</span>Por Referencia</h3>
+        <div class="chart-wrap chart-h-sm" style="position:relative">
+            <canvas id="chart-referencia"></canvas>
+            <div class="loading-overlay" id="loading-referencia" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3><span class="material-symbols-outlined">bar_chart</span>Por Estacion</h3>
+        <div class="chart-wrap chart-h-sm" style="position:relative">
+            <canvas id="chart-estacion"></canvas>
+            <div class="loading-overlay" id="loading-estacion" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3><span class="material-symbols-outlined">groups</span>Top Trabajadores</h3>
+        <div class="chart-wrap chart-h-sm" style="position:relative">
+            <canvas id="chart-trabajador"></canvas>
+            <div class="loading-overlay" id="loading-trabajador" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3><span class="material-symbols-outlined">schedule</span>Produccion por Hora</h3>
+        <div class="chart-wrap chart-h-sm" style="position:relative">
+            <canvas id="chart-hora"></canvas>
+            <div class="loading-overlay" id="loading-hora" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="chart-card lg:col-span-2">
+        <h3><span class="material-symbols-outlined">compare_arrows</span>Stock vs Produccion</h3>
+        <div class="chart-wrap chart-h-md" style="position:relative">
+            <canvas id="chart-stock"></canvas>
+            <div class="loading-overlay" id="loading-stock" style="display:none"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const C = {
+    amber:    'rgba(249,200,14,0.75)',
+    amberBg:  'rgba(249,200,14,0.12)',
+    amberB:   '#f9c80e',
+    amberB2:  '#e6b800',
+    green:    'rgba(16,133,78,0.65)',
+    greenB:   '#10854e',
+    red:      'rgba(186,26,26,0.60)',
+    redB:     '#ba1a1a',
+    blue:     'rgba(59,130,246,0.60)',
+    blueB:    '#3b82f6',
+    gray:     'rgba(148,163,184,0.65)',
+    grayB:    '#64748b',
+    purple:   'rgba(139,92,246,0.55)',
+    teal:     'rgba(20,184,166,0.55)',
+    text:     '#4e4632',
+    grid:     'rgba(209,197,171,0.3)',
+};
+
+function refBgColor(tipo, codigo) {
+    if (codigo === 'ESP-SV-005') return C.green;
+    if (tipo === 'oro') return C.amber;
+    return C.gray;
+}
+function refBorderColor(tipo, codigo) {
+    if (codigo === 'ESP-SV-005') return C.greenB;
+    if (tipo === 'oro') return C.amberB2;
+    return C.grayB;
+}
+function stnBgColor(tm) {
+    if (tm === 'suma') return C.green;
+    if (tm === 'resta') return C.red;
+    return C.blue;
+}
+function stnBorderColor(tm) {
+    if (tm === 'suma') return C.greenB;
+    if (tm === 'resta') return C.redB;
+    return C.blueB;
+}
+
+const instances = {};
+function kill(key) { if (instances[key]) { instances[key].destroy(); instances[key] = null; } }
+
+const fontFam = '"Hanken Grotesk", sans-serif';
+
+function sharedOpts(overrides) {
+    return Object.assign({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: C.text, font: { family: fontFam, size: 11 }, padding: 14, usePointStyle: true, pointStyleWidth: 8 } },
+            tooltip: { backgroundColor: '#0b1c30', titleColor: '#fff', bodyColor: '#e5eeff', cornerRadius: 8, padding: 10, titleFont: { family: fontFam, size: 12 }, bodyFont: { family: fontFam, size: 12 } },
+        },
+    }, overrides);
+}
+
+const SC = { grid: { color: C.grid, drawBorder: false }, ticks: { color: C.text, font: { family: fontFam, size: 11 } } };
+
+async function cargarAnaliticas(dias) {
+    const res = await fetch('/produccion/api/analiticas/?dias=' + dias);
+    const data = await res.json();
+    renderDiario(data.diario);
+    renderReferencia(data.por_referencia);
+    renderEstacion(data.por_estacion);
+    renderTrabajador(data.por_trabajador);
+    renderHora(data.por_hora);
+    renderStock(data.stock_vs_prod);
+}
+
+function renderDiario(diario) {
+    kill('diario');
+    const ctx = document.getElementById('chart-diario').getContext('2d');
+    instances.diario = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: diario.map(d => d.fecha),
+            datasets: [{
+                label: 'Unidades',
+                data: diario.map(d => d.total),
+                borderColor: C.amberB,
+                backgroundColor: C.amberBg,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                pointBackgroundColor: C.amberB,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+            }]
+        },
+        options: sharedOpts({
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                x: SC,
+                y: Object.assign({}, SC, { beginAtZero: true, title: { display: true, text: 'Unidades', color: C.text, font: { family: fontFam, size: 11 } } }),
+            },
+        }),
+    });
+}
+
+function renderReferencia(refs) {
+    kill('referencia');
+    if (!refs.length) return;
+    const ctx = document.getElementById('chart-referencia').getContext('2d');
+    const palette = refs.map(r => refBgColor(r.referencia__tipo, r.referencia__codigo));
+    instances.referencia = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: refs.map(r => r.referencia__codigo),
+            datasets: [{
+                data: refs.map(r => r.total),
+                backgroundColor: palette,
+                borderColor: '#fff',
+                borderWidth: 2,
+            }]
+        },
+        options: sharedOpts({
+            plugins: {
+                legend: { position: 'bottom', labels: { color: C.text, font: { family: fontFam, size: 10 }, padding: 10, usePointStyle: true, pointStyleWidth: 8 } },
+                tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.raw + ' uds' } },
+            },
+        }),
+    });
+}
+
+function renderEstacion(estaciones) {
+    kill('estacion');
+    if (!estaciones.length) return;
+    const ctx = document.getElementById('chart-estacion').getContext('2d');
+    const palette = estaciones.map(e => stnBgColor(e.estacion__tipo_movimiento));
+    const borders = estaciones.map(e => stnBorderColor(e.estacion__tipo_movimiento));
+    instances.estacion = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: estaciones.map(e => e.estacion__nombre),
+            datasets: [{
+                label: 'Unidades',
+                data: estaciones.map(e => e.total),
+                backgroundColor: palette,
+                borderColor: borders,
+                borderWidth: 1,
+                borderRadius: 6,
+            }]
+        },
+        options: sharedOpts({
+            scales: { x: SC, y: Object.assign({}, SC, { beginAtZero: true, ticks: { stepSize: 1 } }) },
+        }),
+    });
+}
+
+function renderTrabajador(workers) {
+    kill('trabajador');
+    if (!workers.length) return;
+    const ctx = document.getElementById('chart-trabajador').getContext('2d');
+    instances.trabajador = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: workers.map(w => w.nombre_completo),
+            datasets: [{
+                label: 'Unidades',
+                data: workers.map(w => w.total),
+                backgroundColor: C.amber,
+                borderColor: C.amberB2,
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: sharedOpts({
+            indexAxis: 'y',
+            scales: { x: Object.assign({}, SC, { beginAtZero: true, ticks: { stepSize: 1 } }), y: SC },
+            plugins: { legend: { display: false } },
+        }),
+    });
+}
+
+function renderHora(horas) {
+    kill('hora');
+    const ctx = document.getElementById('chart-hora').getContext('2d');
+    instances.hora = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: horas.map(h => h.hora),
+            datasets: [{
+                label: 'Unidades',
+                data: horas.map(h => h.total),
+                backgroundColor: C.amberBg,
+                borderColor: C.amber,
+                borderWidth: 1.5,
+                borderRadius: 4,
+            }]
+        },
+        options: sharedOpts({
+            scales: {
+                x: Object.assign({}, SC, { ticks: { maxTicksLimit: 12, color: C.text, font: { family: fontFam, size: 10 } } }),
+                y: Object.assign({}, SC, { beginAtZero: true, ticks: { stepSize: 1 } }),
+            },
+            plugins: { legend: { display: false } },
+        }),
+    });
+}
+
+function renderStock(items) {
+    kill('stock');
+    if (!items.length) return;
+    const ctx = document.getElementById('chart-stock').getContext('2d');
+    instances.stock = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: items.map(i => i.nombre.length > 18 ? i.nombre.substring(0, 18) + '…' : i.nombre),
+            datasets: [
+                {
+                    label: 'Stock actual',
+                    data: items.map(i => i.stock),
+                    backgroundColor: C.blue.replace('0.60', '0.12'),
+                    borderColor: C.blueB,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Producido (periodo)',
+                    data: items.map(i => i.producido),
+                    backgroundColor: C.amberBg,
+                    borderColor: C.amber,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+            ]
+        },
+        options: sharedOpts({
+            indexAxis: 'y',
+            scales: { x: Object.assign({}, SC, { beginAtZero: true, stacked: false }), y: SC },
+        }),
+    });
+}
+
+document.querySelectorAll('#filter-bar .filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#filter-bar .filter-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        cargarAnaliticas(parseInt(btn.dataset.dias));
+    });
+});
+
+cargarAnaliticas(7);
+</script>
+{% endblock %}

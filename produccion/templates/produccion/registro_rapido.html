@@ -50,7 +50,7 @@
     .kiosk-header-inner {
         max-width: 1440px; margin: 0 auto;
         display: flex; justify-content: space-between; align-items: center;
-        padding: 12px 20px;
+        padding: 12px 8px;
     }
 </style>
 {% endblock %}
@@ -66,14 +66,14 @@
         </div>
         <div class="flex items-center gap-3">
             <label class="text-xs font-semibold text-[#4e4632] uppercase hidden sm:inline">Estacion:</label>
-            <select id="estacion-select" class="rounded-xl border border-[#d1c5ab] px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-[#f9c80e] outline-none" onchange="cambiarEstacion(this.value)">
+            <select id="estacion-select" class="min-w-0 max-w-[130px] sm:max-w-none rounded-xl border border-[#d1c5ab] px-3 sm:px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-[#f9c80e] outline-none truncate" onchange="cambiarEstacion(this.value)">
                 {% for est in estaciones %}
                 <option value="{{ est.id }}" {% if est.id == estacion_actual.id %}selected{% endif %}>
                     {{ est.nombre }} ({{ est.get_tipo_movimiento_display }})
                 </option>
                 {% endfor %}
             </select>
-            <a href="{% url 'produccion:login' %}" class="p-2 rounded-lg hover:bg-[#e5eeff] transition-colors" title="Supervisor">
+            <a href="{% url 'produccion:login' %}" class="flex-shrink-0 p-2 rounded-lg hover:bg-[#e5eeff] transition-colors" title="Supervisor">
                 <span class="material-symbols-outlined text-[#4e4632]">lock</span>
             </a>
         </div>

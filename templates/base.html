@@ -86,6 +86,12 @@
             .rail:hover { width: 240px; box-shadow: 4px 0 24px rgba(0,0,0,0.1); z-index: 50; }
             .rail-toggle { display: none; }
         }
+        @media (max-width: 767px) {
+            .rail { transform: translateX(-100%); box-shadow: none; }
+            .rail.is-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.1); width: 240px; }
+            .rail:hover { width: 80px; box-shadow: none; }
+            .rail.is-open:hover { width: 240px; }
+        }
         .btn-primary { @apply bg-[#f9c80e] text-[#6b5400] font-semibold rounded-xl px-4 py-2 hover:brightness-95 transition-all shadow-sm; }
         .btn-danger { @apply bg-[#ba1a1a] text-white font-semibold rounded-xl px-4 py-2 hover:brightness-90 transition-all; }
         .btn-outline { @apply bg-white border border-[#d1c5ab] text-[#4e4632] font-semibold rounded-xl px-4 py-2 hover:bg-[#e5eeff] transition-all; }
@@ -98,7 +104,7 @@
 <body class="min-h-screen">
     {% block layout %}
     {% include 'components/_sidebar.html' %}
-    <div class="ml-[80px] min-h-screen flex flex-col">
+    <div class="md:ml-[80px] min-h-screen flex flex-col">
         {% include 'components/_topbar.html' %}
         <main class="flex-1 p-6 max-w-[1440px] mx-auto w-full">
             {% if messages %}

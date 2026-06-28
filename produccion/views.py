@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
 from datetime import timedelta
+from django.db.models.functions import ExtractHour
 
 from .models import Referencia, Estacion, ProduccionRegistro
 from .services import procesar_produccion, generar_sticker_data, build_sparkline_path
@@ -266,6 +267,103 @@ def dashboard_view(request):
         'trabajadores_data': trabajadores_data,
     }
     return render(request, 'produccion/dashboard.html', context)
+
+
+@staff_required
+def analiticas_view(request):
+    context = {
+        'hoy': timezone.now().date(),
+        'filtros': [
+            ('Hoy', 1),
+            ('7 dias', 7),
+            ('14 dias', 14),
+            ('30 dias', 30),
+        ],
+    }
+    return render(request, 'produccion/analiticas.html', context)
+
+
+@staff_required
+def api_analiticas(request):
+    hoy = timezone.now().date()
+    dias = int(request.GET.get('dias', 7))
+    inicio = hoy - timedelta(days=dias - 1)
+
+    diario_qs = (ProduccionRegistro.objects
+        .filter(timestamp__date__gte=inicio)
+        .values('timestamp__date')
+        .annotate(total=Sum('cantidad'))
+        .order_by('timestamp__date'))
+    diario_dict = {d['timestamp__date']: d['total'] for d in diario_qs}
+    diario = []
+    for i in range(dias):
+        dia = inicio + timedelta(days=i)
+        diario.append({
+            'fecha': dia.strftime('%d/%m'),
+            'total': diario_dict.get(dia, 0),
+        })
+
+    por_referencia = list(ProduccionRegistro.objects
+        .filter(timestamp__date__gte=inicio)
+        .values('referencia__codigo', 'referencia__nombre', 'referencia__tipo')
+        .annotate(total=Sum('cantidad'))
+        .order_by('-total'))
+
+    por_estacion = list(ProduccionRegistro.objects
+        .filter(timestamp__date__gte=inicio)
+        .values('estacion__nombre', 'estacion__tipo_movimiento')
+        .annotate(total=Sum('cantidad'))
+        .order_by('-total'))
+
+    por_trabajador = list(ProduccionRegistro.objects
+        .filter(timestamp__date__gte=inicio, trabajador__isnull=False)
+        .values('trabajador__nombre', 'trabajador__apellidos')
+        .annotate(total=Sum('cantidad'))
+        .order_by('-total')[:10])
+    for item in por_trabajador:
+        apellidos = (item.get('trabajador__apellidos') or '').strip()
+        nombre = (item.get('trabajador__nombre') or '').strip()
+        item['nombre_completo'] = f"{nombre} {apellidos}".strip()
+
+    por_hora_qs = (ProduccionRegistro.objects
+        .filter(timestamp__date__gte=inicio)
+        .annotate(hora=ExtractHour('timestamp'))
+        .values('hora')
+        .annotate(total=Sum('cantidad'))
+        .order_by('hora'))
+    hora_dict = {d['hora']: d['total'] for d in por_hora_qs}
+    por_hora = []
+    for h in range(24):
+        por_hora.append({
+            'hora': f"{h:02d}:00",
+            'total': hora_dict.get(h, 0),
+        })
+
+    referencias = Referencia.objects.filter(activo=True)
+    stock_vs_prod = []
+    for ref in referencias:
+        stock = stock_actual_por_referencia(ref)
+        producido = (ProduccionRegistro.objects
+            .filter(referencia=ref, timestamp__date__gte=inicio)
+            .aggregate(t=Sum('cantidad'))['t'] or 0)
+        if stock > 0 or producido > 0:
+            stock_vs_prod.append({
+                'codigo': ref.codigo,
+                'nombre': ref.nombre,
+                'tipo': ref.get_tipo_display(),
+                'stock': stock,
+                'producido': producido,
+            })
+    stock_vs_prod.sort(key=lambda x: x['producido'] + x['stock'], reverse=True)
+
+    return JsonResponse({
+        'diario': diario,
+        'por_referencia': por_referencia,
+        'por_estacion': por_estacion,
+        'por_trabajador': por_trabajador,
+        'por_hora': por_hora,
+        'stock_vs_prod': stock_vs_prod,
+    })
 
 
 @login_required
