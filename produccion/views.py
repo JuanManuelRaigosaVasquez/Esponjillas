@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.db.models.functions import ExtractHour
 
 from .models import Referencia, Estacion, ProduccionRegistro
@@ -33,7 +33,7 @@ def login_view(request):
             else:
                 messages.warning(request, 'Los trabajadores usan la pantalla de registro rapido. Los supervisores usan /login/.')
                 return redirect('produccion:registro_rapido')
-        messages.error(request, 'Credenciales invalidas')
+        return render(request, 'auth/login.html', {'error': 'Usuario o contraseña incorrecta'})
     return render(request, 'auth/login.html')
 
 
@@ -44,29 +44,83 @@ def logout_view(request):
 
 @staff_required
 def operator_view(request):
-    referencias = Referencia.objects.filter(activo=True)
-    estaciones = Estacion.objects.filter(activo=True)
-    estacion_actual = request.GET.get('estacion')
+    hoy = timezone.now().date()
+    filtro = request.GET.get('filtro', 'hoy')
 
-    if estacion_actual:
-        try:
-            estacion_actual = Estacion.objects.get(id=int(estacion_actual), activo=True)
-        except (ValueError, Estacion.DoesNotExist):
-            estacion_actual = estaciones.first()
-    elif estaciones.exists():
-        estacion_actual = estaciones.first()
+    fecha_personalizada = ''
 
-    ultimos = ProduccionRegistro.objects.filter(
-        operario=request.user,
-        timestamp__date=timezone.now().date()
-    ).order_by('-timestamp')[:20]
+    if filtro == 'semana':
+        fecha_inicio = hoy - timedelta(days=hoy.weekday())
+        fecha_fin = hoy
+    elif filtro == 'mes':
+        fecha_inicio = hoy.replace(day=1)
+        fecha_fin = hoy
+    elif filtro == 'ano':
+        fecha_inicio = hoy.replace(month=1, day=1)
+        fecha_fin = hoy
+    elif filtro == 'personalizado':
+        fecha_str = request.GET.get('fecha', '')
+        if fecha_str:
+            try:
+                fecha_inicio = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                fecha_fin = fecha_inicio
+                fecha_personalizada = fecha_str
+            except ValueError:
+                fecha_inicio = hoy
+                fecha_fin = hoy
+        else:
+            fecha_inicio = hoy
+            fecha_fin = hoy
+    else:
+        fecha_inicio = hoy
+        fecha_fin = hoy
+
+    base_qs = ProduccionRegistro.objects.filter(
+        timestamp__date__gte=fecha_inicio,
+        timestamp__date__lte=fecha_fin,
+    )
+
+    total_producido = base_qs.aggregate(t=Sum('cantidad'))['t'] or 0
+
+    num_dias = (hoy - fecha_inicio).days + 1
+    promedio_diario = round(total_producido / num_dias, 1) if num_dias > 0 else 0
+
+    top_t = base_qs.filter(trabajador__isnull=False).values(
+        'trabajador__nombre', 'trabajador__apellidos'
+    ).annotate(t=Sum('cantidad')).order_by('-t').first()
+
+    top_p = base_qs.values('referencia__codigo').annotate(
+        t=Sum('cantidad')
+    ).order_by('-t').first()
+
+    raw = base_qs.filter(trabajador__isnull=False).values(
+        'trabajador__id', 'trabajador__nombre', 'trabajador__apellidos',
+        'referencia__codigo', 'referencia__nombre'
+    ).annotate(t=Sum('cantidad')).order_by('trabajador__nombre', '-t')
+
+    resumen = {}
+    for r in raw:
+        tid = r['trabajador__id']
+        nombre = f"{r['trabajador__nombre']} {r['trabajador__apellidos']}".strip()
+        iniciales = ''.join(p[0].upper() for p in (r['trabajador__nombre'] + ' ' + r['trabajador__apellidos']).split())[:2]
+        if tid not in resumen:
+            resumen[tid] = {'nombre': nombre, 'iniciales': iniciales, 'items': [], 'total': 0}
+        resumen[tid]['items'].append({'codigo': r['referencia__codigo'], 'cantidad': r['t']})
+        resumen[tid]['total'] += r['t']
+    resumen_lista = sorted(resumen.values(), key=lambda x: x['total'], reverse=True)
+
+    ultimos = base_qs.select_related('trabajador', 'referencia').order_by('-timestamp')[:200]
 
     context = {
-        'referencias': referencias,
-        'estaciones': estaciones,
-        'estacion_actual': estacion_actual,
         'ultimos': ultimos,
-        'hoy': timezone.now().date(),
+        'hoy': hoy,
+        'filtro': filtro,
+        'total_producido': total_producido,
+        'promedio_diario': promedio_diario,
+        'top_trabajador': top_t,
+        'top_producto': top_p,
+        'resumen_lista': resumen_lista,
+        'fecha_personalizada': fecha_personalizada,
     }
     return render(request, 'produccion/operator.html', context)
 
@@ -95,6 +149,9 @@ def api_registrar(request):
 
         stock = stock_actual_por_referencia(referencia)
 
+        nombre_operario = request.user.get_full_name() or request.user.username
+        iniciales_operario = nombre_operario[:2].upper()
+
         return JsonResponse({
             'ok': True,
             'id': registro.id,
@@ -105,6 +162,8 @@ def api_registrar(request):
             'cantidad': cantidad,
             'hora': registro.timestamp.strftime('%H:%M'),
             'stock_actual': stock,
+            'nombre_trabajador': nombre_operario,
+            'iniciales_trabajador': iniciales_operario,
         })
     except Referencia.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'Referencia no encontrada'}, status=400)
@@ -115,6 +174,8 @@ def api_registrar(request):
 
 
 def registro_rapido_view(request):
+    if request.user.is_authenticated and request.user.is_staff:
+        return redirect('produccion:operator')
     trabajadores = Trabajador.objects.filter(activo=True)
     referencias = Referencia.objects.filter(activo=True)
     estaciones = Estacion.objects.filter(activo=True)
@@ -179,7 +240,7 @@ def api_registrar_rapido(request):
             'trabajador': trabajador.nombre_completo,
             'estacion': estacion.nombre,
             'cantidad': cantidad,
-            'hora': registro.timestamp.strftime('%H:%M'),
+            'hora': registro.timestamp.strftime('%d/%m %H:%M'),
             'stock_actual': stock,
         })
     except Trabajador.DoesNotExist:

@@ -1,21 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}Login - Lumina ERP{% endblock %}
+{% block title %}Login - Esponjillas Power{% endblock %}
 {% block layout %}{% endblock %}
 {% block standalone %}
 <div class="min-h-[80vh] flex items-center justify-center">
     <div class="card p-8 w-full max-w-sm">
         <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-[#f9c80e] rounded-2xl flex items-center justify-center text-[#6b5400] mx-auto mb-3">
-                <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+            <div class="w-16 h-16 bg-[#f9c80e] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <img src="/static/img/esponjas/azul.svg" alt="Esponjillas" width="36" height="36">
             </div>
-            <h2 class="text-xl font-bold text-[#0b1c30]">Lumina Manufactura</h2>
+            <h2 class="text-xl font-bold text-[#0b1c30]">Esponjillas Power</h2>
             <p class="text-sm text-[#4e4632] mt-1">Ingresa tus credenciales</p>
         </div>
         <form method="post" class="space-y-4">
             {% csrf_token %}
-            {% if form.errors %}
-            <div class="bg-red-50 text-[#ba1a1a] px-4 py-3 rounded-xl text-sm">
-                Usuario o contraseña incorrectos.
+            {% if error %}
+            <div class="bg-red-50 text-[#ba1a1a] px-4 py-3 rounded-xl text-sm font-medium">
+                {{ error }}
             </div>
             {% endif %}
             <div>

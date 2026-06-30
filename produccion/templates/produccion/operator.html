@@ -1,41 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Produccion - Lumina{% endblock %}
+{% block title %}Produccion - Esponjillas Power{% endblock %}
 {% block extra_head %}
 <style>
-    .touch-btn {
-        min-height: 120px;
-        font-size: 1.8rem;
-        transition: all 0.1s ease;
-        user-select: none;
-        -webkit-user-select: none;
-        -webkit-tap-highlight-color: transparent;
-    }
-    .touch-btn:active {
-        transform: scale(0.95);
-        opacity: 0.8;
-    }
-    .touch-btn.gold { background: linear-gradient(135deg, #f9c80e, #e6b800); color: #6b5400; }
-    .touch-btn.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #333; }
-    .touch-btn.green { background: linear-gradient(135deg, #4ade80, #22c55e); color: #14532d; }
-    .pulse {
-        animation: pulse 0.3s ease;
-    }
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-    .slide-in {
-        animation: slideIn 0.3s ease;
-    }
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateX(-20px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    .sponge-icon {
-        width: 48px;
-        height: 48px;
-    }
     .sponge-icon-sm {
         width: 24px;
         height: 24px;
@@ -46,67 +12,104 @@
 <div class="max-w-4xl mx-auto">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
-            <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Produccion en Tiempo Real</h2>
-            <p class="text-sm text-[#4e4632]">{{ hoy|date:"l d F Y" }} - Operario: {{ user.get_full_name|default:user.username }}</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <label class="text-xs font-semibold text-[#4e4632] uppercase">Estacion:</label>
-            <select id="estacion-select" class="rounded-xl border border-[#d1c5ab] px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-[#f9c80e] outline-none" onchange="cambiarEstacion(this.value)">
-                {% for est in estaciones %}
-                <option value="{{ est.id }}" {% if est.id == estacion_actual.id %}selected{% endif %}>
-                    {{ est.nombre }} ({{ est.get_tipo_movimiento_display }})
-                </option>
-                {% endfor %}
-            </select>
+            <h2 class="text-2xl font-bold font-headline text-[#0b1c30]">Historial de Movimientos</h2>
+            <p class="text-sm text-[#4e4632]">{{ hoy|date:"l d F Y" }}</p>
         </div>
     </div>
 
-    {% if estacion_actual %}
-    <div class="mb-6">
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
-            {% if estacion_actual.tipo_movimiento == 'suma' %}bg-green-100 text-green-700
-            {% elif estacion_actual.tipo_movimiento == 'resta' %}bg-red-100 text-red-700
-            {% else %}bg-blue-100 text-blue-700{% endif %}">
-            <span class="material-symbols-outlined text-lg">
-                {% if estacion_actual.tipo_movimiento == 'suma' %}add_circle
-                {% elif estacion_actual.tipo_movimiento == 'resta' %}remove_circle
-                {% else %}info{% endif %}
-            </span>
-            {{ estacion_actual.get_tipo_movimiento_display }}
+    <div class="flex gap-2 mb-6 flex-wrap">
+        <a href="?filtro=hoy" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all
+            {% if filtro == 'hoy' %}bg-[#f9c80e] text-[#6b5400] shadow-sm{% else %}bg-white text-[#4e4632] border border-[#d1c5ab] hover:bg-[#e5eeff]{% endif %}">Hoy</a>
+        <a href="?filtro=semana" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all
+            {% if filtro == 'semana' %}bg-[#f9c80e] text-[#6b5400] shadow-sm{% else %}bg-white text-[#4e4632] border border-[#d1c5ab] hover:bg-[#e5eeff]{% endif %}">Semana</a>
+        <a href="?filtro=mes" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all
+            {% if filtro == 'mes' %}bg-[#f9c80e] text-[#6b5400] shadow-sm{% else %}bg-white text-[#4e4632] border border-[#d1c5ab] hover:bg-[#e5eeff]{% endif %}">Mes</a>
+        <a href="?filtro=ano" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all
+            {% if filtro == 'ano' %}bg-[#f9c80e] text-[#6b5400] shadow-sm{% else %}bg-white text-[#4e4632] border border-[#d1c5ab] hover:bg-[#e5eeff]{% endif %}">Año</a>
+
+        <button type="button" onclick="abrirCalendario()"
+            class="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5
+            {% if filtro == 'personalizado' %}bg-[#f9c80e] text-[#6b5400] shadow-sm{% else %}bg-white text-[#4e4632] border border-[#d1c5ab] hover:bg-[#e5eeff]{% endif %}">
+            <span class="material-symbols-outlined text-base">calendar_today</span>
+            {% if fecha_personalizada %}{{ fecha_personalizada }}{% else %}Seleccionar día{% endif %}
+        </button>
+        <input type="date" id="fecha-input" value="{{ fecha_personalizada }}" onchange="irAFecha(this.value)" class="sr-only">
+    </div>
+
+    <script>
+    function abrirCalendario() {
+        var input = document.getElementById('fecha-input');
+        try { input.showPicker(); } catch(e) { input.click(); }
+    }
+    function irAFecha(fecha) {
+        if (fecha) {
+            window.location = '?filtro=personalizado&fecha=' + fecha;
+        }
+    }
+    </script>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="stats-cards">
+        <div class="card p-4 text-center">
+            <p class="text-xs text-[#807660] uppercase tracking-wide font-semibold mb-1">Total producido</p>
+            <p class="text-2xl font-bold text-[#0b1c30]">{{ total_producido }}</p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-[#807660] uppercase tracking-wide font-semibold mb-1">Promedio diario</p>
+            <p class="text-2xl font-bold text-[#0b1c30]">{{ promedio_diario }}</p>
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-[#807660] uppercase tracking-wide font-semibold mb-1">Top trabajador</p>
+            {% if top_trabajador %}
+            <p class="text-sm font-bold text-[#0b1c30] truncate">{{ top_trabajador.trabajador__nombre }} {{ top_trabajador.trabajador__apellidos }}</p>
+            <p class="text-xs text-[#4e4632]">{{ top_trabajador.t }} unid.</p>
+            {% else %}
+            <p class="text-sm text-[#4e4632]">—</p>
+            {% endif %}
+        </div>
+        <div class="card p-4 text-center">
+            <p class="text-xs text-[#807660] uppercase tracking-wide font-semibold mb-1">Top esponja</p>
+            {% if top_producto %}
+            <p class="text-sm font-bold text-[#0b1c30]">{{ top_producto.referencia__codigo }}</p>
+            <p class="text-xs text-[#4e4632]">{{ top_producto.t }} unid.</p>
+            {% else %}
+            <p class="text-sm text-[#4e4632]">—</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if resumen_lista %}
+    <div class="card p-6 mb-6">
+        <h3 class="font-bold text-base mb-4 flex items-center gap-2 text-[#0b1c30]">
+            <span class="material-symbols-outlined">bar_chart</span>
+            Resumen por trabajador
+        </h3>
+        <div class="space-y-3">
+            {% for t in resumen_lista %}
+            <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                <span class="w-8 h-8 rounded-full bg-[#f9c80e] text-[#6b5400] text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{{ t.iniciales }}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-[#0b1c30] mb-1">{{ t.nombre }}</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for item in t.items %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium
+                            {% if item.codigo == 'ESP-SV-005' %}bg-green-100 text-green-700
+                            {% elif item.codigo == 'ESP-ORO-003' or item.codigo == 'ESP-DU-004' %}bg-[#f9c80e]/20 text-[#6b5400]
+                            {% else %}bg-gray-200 text-[#4e4632]{% endif %}">
+                            {{ item.codigo }} <strong>x{{ item.cantidad }}</strong>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <span class="text-lg font-bold text-[#0b1c30] flex-shrink-0">{{ t.total }}</span>
+            </div>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="referencias-grid">
-        {% for ref in referencias %}
-        <button class="touch-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-md border border-white/20 card
-            {% if ref.codigo == 'ESP-SV-005' %}green{% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}gold{% else %}silver{% endif %}"
-            onclick="registrarProduccion({{ ref.id }}, {{ estacion_actual.id|default:0 }})"
-            id="btn-{{ ref.id }}">
-            {% if ref.codigo == 'ESP-SV-005' %}
-                <img src="/static/img/esponjas/verde.svg" alt="{{ ref.nombre }}" class="sponge-icon">
-            {% elif ref.codigo == 'ESP-ORO-003' or ref.codigo == 'ESP-DU-004' %}
-                <img src="/static/img/esponjas/oro.svg" alt="{{ ref.nombre }}" class="sponge-icon">
-            {% else %}
-                <img src="/static/img/esponjas/brillo.svg" alt="{{ ref.nombre }}" class="sponge-icon">
-            {% endif %}
-            <span class="font-bold text-sm uppercase tracking-wide">{{ ref.nombre }}</span>
-            <span class="text-xs opacity-70">{{ ref.codigo }}</span>
-        </button>
-        {% empty %}
-        <div class="col-span-full text-center py-12 text-[#4e4632]">
-            <span class="material-symbols-outlined text-6xl mb-4 block">inventory_2</span>
-            <p class="text-lg">No hay referencias activas. Agregalas desde el panel de administracion.</p>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="card p-6 mt-6">
-        <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined">history</span>
-            Ultimos Registros Hoy
-        </h3>
-        <div class="space-y-2 max-h-80 overflow-y-auto" id="ultimos-registros">
+    {% if filtro != 'ano' %}
+    <div class="card p-6">
+        <div class="space-y-2 max-h-[70vh] overflow-y-auto" id="ultimos-registros">
             {% for reg in ultimos %}
             <div class="flex items-center gap-3 p-3 rounded-xl {% if reg.referencia.codigo == 'ESP-SV-005' %}bg-green-100{% elif reg.referencia.codigo == 'ESP-ORO-003' or reg.referencia.codigo == 'ESP-DU-004' %}bg-[#f9c80e]/10{% else %}bg-gray-100{% endif %}">
                 {% if reg.referencia.codigo == 'ESP-SV-005' %}
@@ -116,93 +119,26 @@
                 {% else %}
                     <img src="/static/img/esponjas/brillo.svg" alt="{{ reg.referencia.nombre }}" class="sponge-icon-sm">
                 {% endif %}
-                <span class="font-semibold">{{ reg.referencia.codigo }}</span>
-                <span class="text-sm text-[#4e4632]">x{{ reg.cantidad }}</span>
-                <span class="text-xs text-[#807660] ml-auto">{{ reg.hora|time:"H:i" }}</span>
+                {% if reg.trabajador %}
+                <span class="w-6 h-6 rounded-full bg-[#f9c80e] text-[#6b5400] text-xs font-bold flex items-center justify-center flex-shrink-0">{{ reg.trabajador.iniciales }}</span>
+                <span class="font-semibold text-xs">{{ reg.trabajador.nombre_completo|truncatechars:14 }}</span>
+                {% elif reg.operario %}
+                <span class="w-6 h-6 rounded-full bg-[#d1c5ab] text-[#4e4632] text-xs font-bold flex items-center justify-center flex-shrink-0">{{ reg.operario.username|slice:":2"|upper }}</span>
+                <span class="font-semibold text-xs">{{ reg.operario.get_full_name|default:reg.operario.username|truncatechars:14 }}</span>
+                {% endif %}
+                <span class="font-semibold text-sm">{{ reg.referencia.codigo }}</span>
+                <span class="text-xs text-[#807660] ml-auto">{{ reg.timestamp|date:"d/m H:i" }}</span>
                 {% if not reg.sticker_impreso %}
-                <a href="{% url 'produccion:imprimir_sticker' reg.id %}" target="_blank" class="text-[#745b00] hover:bg-[#f9c80e]/20 p-1 rounded-lg" title="Imprimir sticker">
+                <a href="{% url 'produccion:imprimir_sticker' reg.id %}" target="_blank" class="text-[#745b00] hover:bg-[#f9c80e]/20 p-1 rounded-lg flex-shrink-0" title="Imprimir sticker">
                     <span class="material-symbols-outlined text-lg">print</span>
                 </a>
                 {% endif %}
             </div>
             {% empty %}
-            <p class="text-sm text-[#4e4632] text-center py-4">Sin registros hoy. Toca una referencia para comenzar.</p>
+            <p class="text-sm text-[#4e4632] text-center py-4">Sin registros en este periodo.</p>
             {% endfor %}
         </div>
     </div>
+    {% endif %}
 </div>
-
-<script>
-const CSRF = '{{ csrf_token }}';
-
-async function registrarProduccion(refId, estacionId) {
-    const btn = document.getElementById('btn-' + refId);
-    btn.classList.add('pulse');
-
-    try {
-        const res = await fetch('/produccion/api/registrar/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': CSRF,
-            },
-            body: JSON.stringify({
-                referencia_id: refId,
-                estacion_id: estacionId,
-                cantidad: 1,
-            })
-        });
-        const data = await res.json();
-
-        if (data.ok) {
-            actualizarUltimos(data);
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch (e) {
-        alert('Error de conexion');
-    }
-
-    setTimeout(() => btn.classList.remove('pulse'), 300);
-}
-
-function actualizarUltimos(data) {
-    const container = document.getElementById('ultimos-registros');
-    let colorClass, iconSrc;
-    
-    if (data.codigo === 'ESP-SV-005') {
-        colorClass = 'bg-green-100';
-        iconSrc = '/static/img/esponjas/verde.svg';
-    } else if (data.codigo === 'ESP-ORO-003' || data.codigo === 'ESP-DU-004') {
-        colorClass = 'bg-[#f9c80e]/10';
-        iconSrc = '/static/img/esponjas/oro.svg';
-    } else {
-        colorClass = 'bg-gray-100';
-        iconSrc = '/static/img/esponjas/brillo.svg';
-    }
-
-    const div = document.createElement('div');
-    div.className = 'flex items-center gap-3 p-3 rounded-xl slide-in ' + colorClass;
-    div.innerHTML = `
-        <img src="${iconSrc}" alt="${data.referencia}" class="sponge-icon-sm">
-        <span class="font-semibold">${data.referencia}</span>
-        <span class="text-sm text-[#4e4632]">x${data.cantidad}</span>
-        <span class="text-xs text-[#807660] ml-auto">${data.hora}</span>
-        <a href="/produccion/imprimir-sticker/${data.id}/" target="_blank" class="text-[#745b00] hover:bg-[#f9c80e]/20 p-1 rounded-lg">
-            <span class="material-symbols-outlined text-lg">print</span>
-        </a>
-    `;
-    container.insertBefore(div, container.firstChild);
-
-    if (container.children.length > 50) {
-        container.removeChild(container.lastChild);
-    }
-}
-
-function cambiarEstacion(estacionId) {
-    const url = new URL(window.location);
-    url.searchParams.set('estacion', estacionId);
-    window.location = url.toString();
-}
-</script>
 {% endblock %}

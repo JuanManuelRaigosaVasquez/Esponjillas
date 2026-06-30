@@ -1,16 +1,18 @@
 <aside class="rail" id="sidebar">
     <div class="rail-header">
         <div class="rail-logo">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+            <img src="/static/img/esponjas/azul.svg" alt="Esponjillas" width="28" height="28">
         </div>
-        <span class="rail-label text-lg font-bold text-[#0b1c30]">Lumina</span>
+        <span class="rail-label text-lg font-bold text-[#0b1c30]">Power</span>
     </div>
 
     <nav class="rail-nav">
+        {% if not user.is_staff %}
         <a href="{% url 'produccion:registro_rapido' %}" class="rail-item" data-url="/produccion/registro-rapido">
             <span class="material-symbols-outlined">bolt</span>
             <span class="rail-label">Registro Rapido</span>
         </a>
+        {% endif %}
         <a href="{% url 'produccion:operator' %}" class="rail-item" data-url="/produccion/operator">
             <span class="material-symbols-outlined">touch_app</span>
             <span class="rail-label">Produccion</span>
